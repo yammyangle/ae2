@@ -1,3 +1,5 @@
 # ae2
 
-A new Flutter project.
+Repository Owner: Yasmin Angel
+Kate Nguyen 
+Elizabeth Bright
