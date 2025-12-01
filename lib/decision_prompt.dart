@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'decision.dart';
+import 'package:auto_size_text/auto_size_text.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 
 class DecisionPrompt extends StatelessWidget {
   final Decision decision;
@@ -41,7 +43,7 @@ class DecisionPrompt extends StatelessWidget {
                   crossAxisCount: decision.options.length <= 2 ? 1 : 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: decision.options.length == 2 ? 2.4 : 1.5,
+                  childAspectRatio: decision.options.length == 2 ? 3 : 1.5,
                 ),
                 itemCount: decision.options.length,
                 itemBuilder: (context, index) {
@@ -71,15 +73,17 @@ class DecisionPrompt extends StatelessWidget {
                     width: 2,
                   ),
                 ),
-                child: Text(
+                child: AutoSizeText(
                   decision.question,
                   style: GoogleFonts.pixelifySans(
                     textStyle: const TextStyle(
-                      fontSize: 22,
-                      color: Color(0xFFFDF0D5), // Cream text
+                      fontSize: 22,         // max size
+                      color: Color(0xFFFDF0D5),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  maxLines: 3,             // fits full question in 3 lines
+                  minFontSize: 12,         // will shrink if needed
                   textAlign: TextAlign.center,
                 ),
               ),
