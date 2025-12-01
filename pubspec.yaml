@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   google_fonts: ^6.2.1
+  shared_preferences: ^2.5.3
   smooth_page_indicator: ^1.1.0
   auto_size_text: ^3.0.0
 
@@ -22,3 +23,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+
+shared_preferences: ^2.5.3
