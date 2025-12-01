@@ -6,6 +6,7 @@ import 'character.dart';
 import 'event.dart';
 import 'decision_prompt.dart'; 
 import 'decision.dart';
+import 'stats_bar.dart'; 
 
 class EventPage extends StatefulWidget {
   final Event event;
@@ -23,6 +24,12 @@ class _EventPageState extends State<EventPage> {
   int _visibleChars = 0;          // how many characters currently visible
   Timer? _typingTimer;
   bool _showDecision = false;
+  double corruptionLevel = 0;
+  double publicTrust = 50;
+  double personalWealth = -50;
+  double infrastructureQuality = 50;
+  double politicalCapital = 50;
+
 
   String get _currentFullLine => widget.event.dialogue[_currentLineIndex];
 
@@ -109,15 +116,36 @@ class _EventPageState extends State<EventPage> {
         onTap: _showDecision ? null : _onTap, // Disable tap when showing decision
         child: Column(
           children: [
-            // TOP: BACKGROUND IMAGE
+            // TOP: BACKGROUND IMAGE + STATS BAR OVERLAY
             SizedBox(
               height: screenHeight * 0.55,
               width: double.infinity,
-              child: Image.asset(
-                _showDecision 
-                  ? widget.event.decision?.background ?? widget.event.background
-                  : widget.event.background,
-                fit: BoxFit.cover,
+              child: Stack(
+                children: [
+                  // Background image
+                  Positioned.fill(
+                    child: Image.asset(
+                      _showDecision
+                          ? widget.event.decision?.background ?? widget.event.background
+                          : widget.event.background,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+
+                  // Stats bar overlaid at the top
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: StatsBar(
+                      corruptionLevel: corruptionLevel,           
+                      publicTrust: publicTrust,                   
+                      personalWealth: personalWealth,             
+                      infrastructureQuality: infrastructureQuality,
+                      politicalCapital: politicalCapital,
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -137,7 +165,7 @@ class _EventPageState extends State<EventPage> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFFDF0D5), // Cream base
                     border: Border.all(
-                      color: Color(widget.event.color), 
+                      color: Color(widget.event.color),
                       width: 2,
                     ),
                   ),
@@ -172,11 +200,11 @@ class _EventPageState extends State<EventPage> {
                                 textStyle: TextStyle(
                                   fontSize: 30,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFFFDF0D5), // Cream text
+                                  color: const Color(0xFFFDF0D5), // Cream text
                                   shadows: [
                                     Shadow(
                                       color: Color(widget.event.color), // Dark red shadow
-                                      offset: Offset(2, 2),
+                                      offset: const Offset(2, 2),
                                       blurRadius: 1,
                                     ),
                                   ],
@@ -247,5 +275,11 @@ class _EventPageState extends State<EventPage> {
         ),
       ),
     );
+
+
+
+
+
+
   }
 }
