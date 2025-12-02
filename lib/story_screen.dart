@@ -11,6 +11,14 @@ import 'stats_bar.dart';
 
 enum StoryPhase { dayIntro, dialogue, decision }
 
+enum StatType {
+  corruptionLevel,
+  publicTrust,
+  personalWealth,
+  infrastructureQuality,
+  politicalCapital,
+}
+
 class StoryScreen extends StatefulWidget {
   const StoryScreen({super.key});
 
@@ -19,9 +27,9 @@ class StoryScreen extends StatefulWidget {
 }
 
 class _ActiveStatEffect {
-  final String stat;    // e.g. "publicTrust"
-  final double value;   // e.g. 10.0
-  final bool positive;  // true for +, false for -
+  final StatType stat;
+  final double value;
+  final bool positive;
 
   _ActiveStatEffect({
     required this.stat,
@@ -29,26 +37,29 @@ class _ActiveStatEffect {
     required this.positive,
   });
 }
+
 class _StoryScreenState extends State<StoryScreen> {
   static const double portraitSize = 150;
+  static const double minStatValue = -100;
+  static const double maxStatValue = 100;
 
-  // which node in the scenario graph we’re on
-  String _currentNodeId = "start";
+  String _currentNodeId = "node_1";  // Skip straight to node_1
   StoryPhase _phase = StoryPhase.dayIntro;
+
+  // Track which dialogue beat we're on
+  int _currentBeatIndex = 0;
+  int _currentLineIndex = 0;
 
   List<_ActiveStatEffect> _activeEffects = [];
   bool _effectsVisible = false;
-  // NEW: global day counter
   int _currentDay = 1;
 
-  // stats for StatsBar
   double corruptionLevel = 0;
   double publicTrust = 50;
   double personalWealth = -50;
   double infrastructureQuality = 50;
   double politicalCapital = 50;
 
-  // typewriter
   Timer? _typingTimer;
   String _fullText = "";
   String _displayedText = "";
@@ -57,11 +68,15 @@ class _StoryScreenState extends State<StoryScreen> {
 
   ScenarioNode get _currentNode => ScenarioGraph.getNode(_currentNodeId);
   NodePresentation get _present => NodePresentationConfig.forId(_currentNodeId);
+  
+  DialogueBeat get _currentBeat => _present.beats[_currentBeatIndex];
 
   @override
   void initState() {
     super.initState();
-    _startDayIntroTyping();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startDayIntroTyping();
+    });
   }
 
   @override
@@ -69,8 +84,6 @@ class _StoryScreenState extends State<StoryScreen> {
     _typingTimer?.cancel();
     super.dispose();
   }
-
-  // ───────────── TYPEWRITER HELPERS ─────────────
 
   void _startTyping(String text, {int speedMs = 35}) {
     _typingTimer?.cancel();
@@ -82,6 +95,11 @@ class _StoryScreenState extends State<StoryScreen> {
     });
 
     _typingTimer = Timer.periodic(Duration(milliseconds: speedMs), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      
       if (_charIndex >= _fullText.length) {
         timer.cancel();
         setState(() {
@@ -97,23 +115,72 @@ class _StoryScreenState extends State<StoryScreen> {
   }
 
   void _startDayIntroTyping() {
-    // 🔥 use global day counter, NOT nodePresentation day
-    final dayText = "Day $_currentDay in office...";
+    final dayText = "Day ${_present.dayNumber} in office...";
     _startTyping(dayText, speedMs: 45);
   }
 
-  void _startDialogueTyping() {
-    final text = _present.dialogueLines.join("\n");
-    _startTyping(text, speedMs: 25);
+  void _startCurrentLineTyping() {
+    final line = _currentBeat.lines[_currentLineIndex];
+    _startTyping(line, speedMs: 25);
   }
 
-  // ───────────── FLOW CONTROL ─────────────
+  _ActiveStatEffect? _effectForStat(StatType statType) {
+    try {
+      return _activeEffects.firstWhere((effect) => effect.stat == statType);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  void _updateStat(StatType statType, int change) {
+    setState(() {
+      switch (statType) {
+        case StatType.corruptionLevel:
+          corruptionLevel = _clampValue(corruptionLevel + change);
+          break;
+        case StatType.publicTrust:
+          publicTrust = _clampValue(publicTrust + change);
+          break;
+        case StatType.personalWealth:
+          personalWealth = _clampValue(personalWealth + change);
+          break;
+        case StatType.infrastructureQuality:
+          infrastructureQuality = _clampValue(infrastructureQuality + change);
+          break;
+        case StatType.politicalCapital:
+          politicalCapital = _clampValue(politicalCapital + change);
+          break;
+      }
+    });
+  }
+
+  double _clampValue(double value) {
+    return value.clamp(minStatValue, maxStatValue);
+  }
+
+  StatType _stringToStatType(String statString) {
+    switch (statString) {
+      case "corruptionLevel":
+        return StatType.corruptionLevel;
+      case "publicTrust":
+        return StatType.publicTrust;
+      case "personalWealth":
+        return StatType.personalWealth;
+      case "infrastructureQuality":
+        return StatType.infrastructureQuality;
+      case "politicalCapital":
+        return StatType.politicalCapital;
+      default:
+        debugPrint("Unknown stat string: $statString");
+        return StatType.publicTrust;
+    }
+  }
 
   void _onBackgroundTap() {
-    if (_phase == StoryPhase.decision) return; // taps disabled during decision
+    if (_phase == StoryPhase.decision) return;
 
+    // If still typing, finish instantly
     if (!_finishedTyping) {
-      // Skip to end of current text
       _typingTimer?.cancel();
       setState(() {
         _displayedText = _fullText;
@@ -122,41 +189,59 @@ class _StoryScreenState extends State<StoryScreen> {
       return;
     }
 
-    // Finished typing → advance phase
-    setState(() {
-      if (_phase == StoryPhase.dayIntro) {
+    // Move through dialogue
+    if (_phase == StoryPhase.dayIntro) {
+      setState(() {
         _phase = StoryPhase.dialogue;
-        _startDialogueTyping();
-      } else if (_phase == StoryPhase.dialogue) {
-        _phase = StoryPhase.decision;
+        _currentBeatIndex = 0;
+        _currentLineIndex = 0;
+      });
+      _startCurrentLineTyping();
+      return;
+    }
+
+    if (_phase == StoryPhase.dialogue) {
+      // Check if there are more lines in current beat
+      if (_currentLineIndex < _currentBeat.lines.length - 1) {
+        setState(() {
+          _currentLineIndex++;
+        });
+        _startCurrentLineTyping();
+        return;
       }
-    });
+
+      // Check if there are more beats
+      if (_currentBeatIndex < _present.beats.length - 1) {
+        setState(() {
+          _currentBeatIndex++;
+          _currentLineIndex = 0;
+        });
+        _startCurrentLineTyping();
+        return;
+      }
+
+      // All dialogue done, move to decision
+      setState(() {
+        _phase = StoryPhase.decision;
+      });
+    }
   }
 
   void _onDecisionSelected(DecisionOption option) {
     final node = _currentNode;
     final ScenarioChoice choice = node.choices[option.id];
 
-    // 1) Apply effects (update stats)
-    for (final effect in choice.effects) {
-      _applyEffect(effect);
-    }
-
-    // 2) Trigger bubbles for all those effects
     _triggerEffectBubbles(choice.effects);
 
-    // 3) Stay on decision screen while bubbles are visible
     setState(() {
-      _phase = StoryPhase.decision; // already in this phase, but explicit
+      _phase = StoryPhase.decision;
     });
 
-    // 4) After animation, move to next node & day intro
     Future.delayed(const Duration(milliseconds: 1100), () {
       if (!mounted) return;
 
       setState(() {
         if (choice.nextId == "start") {
-          // Restart scenario if you want
           _currentDay = 1;
           corruptionLevel = 0;
           publicTrust = 50;
@@ -167,106 +252,80 @@ class _StoryScreenState extends State<StoryScreen> {
           _currentDay += 1;
         }
 
-        _currentNodeId = choice.nextId;
+        // Check if we should route to bridge collapse or clean path
+        String nextNode = choice.nextId;
+        if (nextNode == "node_6_check") {
+          // If infrastructure is very bad (< 20), bridge collapses
+          // Otherwise, go to clean ending path
+          if (infrastructureQuality < 20) {
+            nextNode = "node_6"; // Bridge collapse crisis
+          } else {
+            nextNode = "node_6_clean"; // Clean path, no crisis
+          }
+        }
+
+        _currentNodeId = nextNode;
         _phase = StoryPhase.dayIntro;
+        _currentBeatIndex = 0;
+        _currentLineIndex = 0;
       });
 
       _startDayIntroTyping();
     });
   }
 
-  void _applyEffect(ScenarioEffect e) {
-    double apply(double current) {
-      switch (e.operation) {
-        case "add":
-          return current + e.value;
-        case "subtract":
-          return current - e.value;
-        case "set":
-          return e.value;
-        default:
-          return current;
-      }
-    }
+  void _triggerEffectBubbles(List<ScenarioEffect> effects) {
+    if (effects.isEmpty) return;
+
+    final newEffects = <_ActiveStatEffect>[];
 
     setState(() {
-      switch (e.stat) {
-        case "corruptionLevel":
-          corruptionLevel = apply(corruptionLevel);
-          break;
-        case "publicTrust":
-          publicTrust = apply(publicTrust);
-          break;
-        case "personalWealth":
-          personalWealth = apply(personalWealth);
-          break;
-        case "infrastructureQuality":
-          infrastructureQuality = apply(infrastructureQuality);
-          break;
-        case "politicalCapital":
-          politicalCapital = apply(politicalCapital);
-          break;
+      for (final e in effects) {
+        final statType = _stringToStatType(e.stat);
+        
+        _updateStat(statType, e.value);
+
+        if (e.value != 0) {
+          newEffects.add(
+            _ActiveStatEffect(
+              stat: statType,
+              value: e.value.abs().toDouble(),
+              positive: e.value > 0,
+            ),
+          );
+        }
       }
+
+      _activeEffects = newEffects;
+      _effectsVisible = newEffects.isNotEmpty;
     });
 
-    // ❌ DO NOT call bubble trigger here anymore
-  }
+    if (newEffects.isEmpty) return;
 
-void _triggerEffectBubbles(List<ScenarioEffect> effects) {
-  // Build bubbles for all add/subtract effects
-  final newEffects = <_ActiveStatEffect>[];
-
-  for (final e in effects) {
-    if (e.operation == "set" || e.value == 0) continue;
-
-    final isPositive = (e.operation == "add" && e.value > 0) ||
-        (e.operation == "subtract" && e.value < 0);
-
-    final amount = e.value.abs();
-
-    newEffects.add(
-      _ActiveStatEffect(
-        stat: e.stat,
-        value: amount,
-        positive: isPositive,
-      ),
-    );
-  }
-
-  if (newEffects.isEmpty) return;
-
-  setState(() {
-    _activeEffects = newEffects;
-    _effectsVisible = true;
-  });
-
-  // Show them, then make them float & fade
-  Future.delayed(const Duration(milliseconds: 800), () {
-    if (!mounted) return;
-    setState(() {
-      _effectsVisible = false;
-    });
-
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 800), () {
       if (!mounted) return;
       setState(() {
-        _activeEffects = [];
+        _effectsVisible = false;
+      });
+
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (!mounted) return;
+        setState(() {
+          _activeEffects = [];
+        });
       });
     });
-  });
-}
+  }
 
-
-  // convert ScenarioNode → your Decision model for DecisionPrompt
   Decision _decisionFromNode(ScenarioNode node) {
     final options = <DecisionOption>[];
     for (int i = 0; i < node.choices.length; i++) {
       final choice = node.choices[i];
       options.add(
         DecisionOption(
-          id: i,             // important: id = index, so we can map back
+          id: i,
           text: choice.text,
-          effect: "",        // we use ScenarioEffect instead
+          effect: "",
         ),
       );
     }
@@ -275,11 +334,9 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
       id: 0,
       question: node.description,
       options: options,
-      background: _present.background,
+      background: _currentBeat.background,
     );
   }
-
-  // ───────────── BUILD UI ─────────────
 
   @override
   Widget build(BuildContext context) {
@@ -287,31 +344,32 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
     final node = _currentNode;
     final decision = _decisionFromNode(node);
 
-    // 🔥 SPECIAL CASE: DAY INTRO = FULL-BLANK SCREEN
     if (_phase == StoryPhase.dayIntro) {
       return Scaffold(
-        backgroundColor: const Color(0xFF003049), // or black if you prefer
+        backgroundColor: const Color(0xFF003049),
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: _onBackgroundTap,
           child: Center(
-            child: Text(
-              _displayedText,
-              style: GoogleFonts.pixelifySans(
-                textStyle: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFFDF0D5),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Text(
+                _displayedText,
+                style: GoogleFonts.pixelifySans(
+                  textStyle: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFFDF0D5),
+                  ),
                 ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
             ),
           ),
         ),
       );
     }
 
-    // For dialogue + decision: use your normal layout style
     return Scaffold(
       backgroundColor: const Color(0xFF003049),
       body: GestureDetector(
@@ -319,60 +377,45 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
         onTap: _onBackgroundTap,
         child: Column(
           children: [
-            // TOP: BACKGROUND + STATS BAR
             SizedBox(
               height: screenHeight * 0.55,
               width: double.infinity,
               child: Stack(
                 children: [
-                  // Background image
                   Positioned.fill(
                     child: Image.asset(
-                      _present.background,
+                      _currentBeat.background,
                       fit: BoxFit.cover,
                     ),
                   ),
-
-                  // Stats bar
                   Positioned(
                     top: 0,
                     left: 0,
                     right: 0,
-                    child: StatsBar(
-                      corruptionLevel: corruptionLevel,
-                      publicTrust: publicTrust,
-                      personalWealth: personalWealth,
-                      infrastructureQuality: infrastructureQuality,
-                      politicalCapital: politicalCapital,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        StatsBar(
+                          corruptionLevel: corruptionLevel,
+                          publicTrust: publicTrust,
+                          personalWealth: personalWealth,
+                          infrastructureQuality: infrastructureQuality,
+                          politicalCapital: politicalCapital,
+                        ),
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          height: 28,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: _buildEffectRow(),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-
-                  // MULTIPLE floating bubbles under the bar
-                  if (_activeEffects.isNotEmpty)
-                    Positioned.fill(
-                      child: Stack(
-                        children: _activeEffects.map((effect) {
-                          return Align(
-                            alignment: _alignmentForStat(effect.stat),
-                            child: AnimatedSlide(
-                              duration: const Duration(milliseconds: 4000),
-                              offset: _effectsVisible
-                                  ? const Offset(0, 0)
-                                  : const Offset(0, -0.5), // float up
-                              child: AnimatedOpacity(
-                                duration: const Duration(milliseconds: 400),
-                                opacity: _effectsVisible ? 1.0 : 0.0, // fade
-                                child: _buildEffectBubble(effect),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
                 ],
               ),
             ),
-
             if (_phase == StoryPhase.dialogue)
               _buildDialogueBox(screenHeight)
             else
@@ -387,62 +430,61 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
   }
 
   Widget _buildDialogueBox(double screenHeight) {
+    final beat = _currentBeat;
+    final boxColor = Color(beat.color);
+    
     return Container(
       height: screenHeight * 0.45,
       width: double.infinity,
-      color: const Color(0xFF780000), // outer frame
+      color: const Color(0xFF780000),
       child: Container(
         margin: const EdgeInsets.all(2),
         decoration: const BoxDecoration(
-          color: Color(0xFFFDF0D5), // beige base
+          color: Color(0xFFFDF0D5),
         ),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // MAIN CONTENT (matching your EventPage aesthetics)
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // NAME BAR
-                Container(
-                  width: double.infinity,
-                  height: 45,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFC1121F), // Bright red
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Color(0xFF780000), // Dark red
-                        width: 2,
+                if (beat.speaker.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    height: 45,
+                    decoration: BoxDecoration(
+                      color: boxColor,
+                      border: const Border(
+                        bottom: BorderSide(
+                          color: Color(0xFF780000),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.only(
+                      left: portraitSize + 7,
+                      bottom: 2,
+                    ),
+                    alignment: Alignment.bottomLeft,
+                    child: Text(
+                      beat.speaker,
+                      style: GoogleFonts.pixelifySans(
+                        textStyle: const TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFFDF0D5),
+                          shadows: [
+                            Shadow(
+                              color: Color(0xFF780000),
+                              offset: Offset(2, 2),
+                              blurRadius: 1,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  padding: const EdgeInsets.only(
-                    left: portraitSize + 7,
-                    bottom: 2,
-                  ),
-                  alignment: Alignment.bottomLeft,
-                  child: Text(
-                    _present.characterName,
-                    style: GoogleFonts.pixelifySans(
-                      textStyle: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFFDF0D5), // Cream text
-                        shadows: [
-                          Shadow(
-                            color: Color(0xFF780000),
-                            offset: Offset(2, 2),
-                            blurRadius: 1,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
                 const SizedBox(height: 8),
-
-                // DIALOGUE TEXT (typewriter text)
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -466,8 +508,6 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
                 ),
               ],
             ),
-
-            // PORTRAIT
             Positioned(
               left: 0,
               top: -portraitSize * 0.7,
@@ -476,7 +516,7 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
                 height: portraitSize,
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: const Color(0xFFC1121F),
+                    color: boxColor,
                     width: 4,
                   ),
                   boxShadow: [
@@ -488,7 +528,7 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
                     ),
                   ],
                   image: DecorationImage(
-                    image: AssetImage(_present.portrait),
+                    image: AssetImage(beat.portrait),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -500,57 +540,67 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
     );
   }
 
-  Alignment _alignmentForStat(String stat) {
-    // y = -1 is top, +1 is bottom
-    // We want these just UNDER the stats bar at the top, so around y = -0.3
-    const double y = -0.3;
+  Widget _buildEffectBubble(_ActiveStatEffect effect) {
+    final sign = effect.positive ? "+" : "-";
+    final color = effect.positive
+        ? const Color(0xFF2ECC71)
+        : const Color(0xFFE74C3C);
 
-    switch (stat) {
-      case "corruptionLevel":
-        return const Alignment(-0.8, y);
-      case "publicTrust":
-        return const Alignment(-0.4, y);
-      case "personalWealth":
-        return const Alignment(0.0, y);
-      case "infrastructureQuality":
-        return const Alignment(0.4, y);
-      case "politicalCapital":
-        return const Alignment(0.8, y);
-      default:
-        return Alignment(0.0, y);
-    }
+    final valueText = effect.value.toInt().toString();
+
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.black.withOpacity(0.7),
+        border: Border.all(
+          color: color,
+          width: 2,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        "$sign$valueText",
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
   }
 
+  List<Widget> _buildEffectRow() {
+    const statsOrder = [
+      StatType.corruptionLevel,
+      StatType.publicTrust,
+      StatType.infrastructureQuality,
+      StatType.politicalCapital,
+      StatType.personalWealth,
+    ];
 
-Widget _buildEffectBubble(_ActiveStatEffect effect) {
-  final sign = effect.positive ? "+" : "-";
-  final color = effect.positive
-      ? const Color(0xFF2ECC71) // green
-      : const Color(0xFFE74C3C); // red
+    return statsOrder.map((stat) {
+      final effect = _effectForStat(stat);
 
-  final valueText = effect.value.toInt().toString();
+      if (effect == null) {
+        return const SizedBox(
+          width: 28,
+          height: 28,
+        );
+      }
 
-  return Container(
-    width: 28,
-    height: 28,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: Colors.black.withOpacity(0.7),
-      border: Border.all(
-        color: color,
-        width: 2,
-      ),
-    ),
-    alignment: Alignment.center,
-    child: Text(
-      "$sign$valueText",
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: color,
-      ),
-    ),
-  );
-}
-
+      return AnimatedSlide(
+        duration: const Duration(milliseconds: 400),
+        offset: _effectsVisible
+            ? Offset.zero
+            : const Offset(0, -0.5),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 400),
+          opacity: _effectsVisible ? 1.0 : 0.0,
+          child: _buildEffectBubble(effect),
+        ),
+      );
+    }).toList();
+  }
 }
