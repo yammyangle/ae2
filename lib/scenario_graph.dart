@@ -27,8 +27,8 @@ class ScenarioChoice {
 }
 
 class ScenarioEffect {
-  final String stat;   // e.g. "publicTrust"
-  final int value;     // e.g. +10, -20, etc.
+  final String stat;
+  final int value;
 
   const ScenarioEffect({
     required this.stat,
@@ -36,14 +36,12 @@ class ScenarioEffect {
   });
 }
 
-/// Your whole JSON story, but as Dart constants:
 class ScenarioGraph {
   static const Map<String, ScenarioNode> nodes = {
     "start": ScenarioNode(
       id: "start",
       title: "Victory Speech",
-      description:
-          "You have just won the election for Governor of Borno State on a platform of liberal reform: free schooling, lower taxes, and better infrastructure. The crowd is cheering. Your first day in office begins now.",
+      description: "You have just won the election for Governor of Borno State.",
       choices: [
         ScenarioChoice(
           text: "Assume Office",
@@ -51,7 +49,7 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "politicalCapital",
-              value: 10, // was add 10
+              value: 10,
             ),
           ],
         ),
@@ -61,62 +59,77 @@ class ScenarioGraph {
     "node_1": ScenarioNode(
       id: "node_1",
       title: "Decision 1: The Campaign Debt",
-      description:
-          "Your campaign manager approaches you nervously. 'Governor, we still owe 50 million Naira to the godfathers who supported your run. They expect to be paid back immediately.'",
+      description: "So, Your Excellency, how do you want to handle this?",
       choices: [
         ScenarioChoice(
-          text: "Refuse to pay (Honor integrity)",
+          text: "I won't be extorted. Let them try whatever they want.",
           nextId: "node_2",
           effects: [
             ScenarioEffect(
               stat: "publicTrust",
-              value: 10, // add 10
+              value: 20,
             ),
             ScenarioEffect(
               stat: "politicalCapital",
-              value: -20, // subtract 20
+              value: -40,
             ),
           ],
         ),
         ScenarioChoice(
-          text: "Pay from government budget (Embezzlement)",
+          text: "The Ministry of Works has some discretionary funds we could redirect temporarily. Infrastructure projects can wait a few months.",
           nextId: "node_2",
           effects: [
             ScenarioEffect(
               stat: "corruptionLevel",
-              value: 15, // add 15
-            ),
-            ScenarioEffect(
-              stat: "publicTrust",
-              value: -5, // subtract 5
-            ),
-          ],
-        ),
-        ScenarioChoice(
-          text: "Give them government contracts (Nepotism)",
-          nextId: "node_2",
-          effects: [
-            ScenarioEffect(
-              stat: "corruptionLevel",
-              value: 10, // add 10
+              value: 10,
             ),
             ScenarioEffect(
               stat: "infrastructureQuality",
-              value: -10, // subtract 10
+              value: -15,
+            ),
+            ScenarioEffect(
+              stat: "politicalCapital",
+              value: 10,
+            ),
+            ScenarioEffect(
+              stat: "publicTrust",
+              value: -5,
             ),
           ],
         ),
         ScenarioChoice(
-          text: "Pay from personal funds (Family Debt)",
+          text: "What if we brought them into the administration? Key positions where they can... benefit legitimately.",
           nextId: "node_2",
           effects: [
             ScenarioEffect(
-              stat: "personalWealth",
-              value: -50, // subtract 50
+              stat: "corruptionLevel",
+              value: 15,
+            ),
+            ScenarioEffect(
+              stat: "infrastructureQuality",
+              value: -20,
             ),
             ScenarioEffect(
               stat: "politicalCapital",
-              value: 5, // add 5
+              value: 20,
+            ),
+          ],
+        ),
+        ScenarioChoice(
+          text: "I'll pay them back myself, from my salary. Set up an installment plan.",
+          nextId: "node_2",
+          effects: [
+            ScenarioEffect(
+              stat: "publicTrust",
+              value: 10,
+            ),
+            ScenarioEffect(
+              stat: "personalWealth",
+              value: -30,
+            ),
+            ScenarioEffect(
+              stat: "politicalCapital",
+              value: -10,
             ),
           ],
         ),
@@ -126,48 +139,47 @@ class ScenarioGraph {
     "node_2": ScenarioNode(
       id: "node_2",
       title: "Decision 2: The Education Budget",
-      description:
-          "You promised free schooling, but the treasury is empty. The party chairman suggests diverting funds from the rural infrastructure budget. 'The villagers don't vote as much as the city folk,' he argues.",
+      description: "What's it going to be, Your Excellency?",
       choices: [
         ScenarioChoice(
-          text: "Refuse and break promise (Honest failure)",
+          text: "I won't break my promise to the people, but I won't steal from rural communities either. We'll announce a phased implementation.",
           nextId: "node_3",
           effects: [
             ScenarioEffect(
               stat: "publicTrust",
-              value: -20, // subtract 20
+              value: -20,
             ),
           ],
         ),
         ScenarioChoice(
-          text: "Divert funds (Fund Urban Schools)",
+          text: "Reallocate the rural infrastructure funds. We'll prioritize urban schools first and expand to rural areas next year.",
           nextId: "node_3",
           effects: [
             ScenarioEffect(
               stat: "publicTrust",
-              value: 5, // add 5
+              value: 5,
             ),
             ScenarioEffect(
               stat: "infrastructureQuality",
-              value: -15, // subtract 15
+              value: -15,
             ),
           ],
         ),
         ScenarioChoice(
-          text: "Accept 'donation' from private schools to drop policy",
+          text: "Arrange a meeting with the private school association. If their proposal benefits the state, I should at least hear them out.",
           nextId: "node_3",
           effects: [
             ScenarioEffect(
               stat: "personalWealth",
-              value: 20, // add 20
+              value: 20,
             ),
             ScenarioEffect(
               stat: "corruptionLevel",
-              value: 10, // add 10
+              value: 10,
             ),
             ScenarioEffect(
               stat: "publicTrust",
-              value: -10, // subtract 10
+              value: -10,
             ),
           ],
         ),
@@ -177,38 +189,37 @@ class ScenarioGraph {
     "node_3": ScenarioNode(
       id: "node_3",
       title: "Decision 3: The Infrastructure Contract",
-      description:
-          "A major road needs building. A local contractor offers you a 20% kickback if you award them the contract, but they are known for using cheap materials.",
+      description: "The decision is yours, Governor.",
       choices: [
         ScenarioChoice(
-          text: "Award to local contractor (Take Kickback)",
+          text: "Award it to Alhaji Bello. Take the kickback.",
           nextId: "node_4",
           effects: [
             ScenarioEffect(
               stat: "personalWealth",
-              value: 20, // add 20
+              value: 20,
             ),
             ScenarioEffect(
               stat: "infrastructureQuality",
-              value: -25, // subtract 25
+              value: -25,
             ),
             ScenarioEffect(
               stat: "corruptionLevel",
-              value: 20, // add 20
+              value: 20,
             ),
           ],
         ),
         ScenarioChoice(
-          text: "Award to international firm (Clean)",
+          text: "Award it to the international firm. No kickbacks.",
           nextId: "node_4",
           effects: [
             ScenarioEffect(
               stat: "politicalCapital",
-              value: -10, // subtract 10
+              value: -10,
             ),
             ScenarioEffect(
               stat: "infrastructureQuality",
-              value: 10, // add 10
+              value: 10,
             ),
           ],
         ),
@@ -218,30 +229,51 @@ class ScenarioGraph {
     "node_4": ScenarioNode(
       id: "node_4",
       title: "Decision 4: Family Pressure",
-      description:
-          "Your cousin needs a job. He is unqualified, but your mother is begging you. 'He is family,' she says.",
+      description: "What will you tell your cousin?",
       choices: [
         ScenarioChoice(
-          text: "Give him a high-level job (Nepotism)",
+          text: "Give him a high-level position. Head of Licensing.",
           nextId: "node_5",
           effects: [
             ScenarioEffect(
               stat: "corruptionLevel",
-              value: 10, // add 10
+              value: 10,
             ),
             ScenarioEffect(
               stat: "infrastructureQuality",
-              value: -5, // subtract 5
+              value: -5,
+            ),
+            ScenarioEffect(
+              stat: "politicalCapital",
+              value: 5,
             ),
           ],
         ),
         ScenarioChoice(
-          text: "Refuse entirely",
+          text: "I'll give him a low-level position he can actually handle.",
           nextId: "node_5",
           effects: [
             ScenarioEffect(
               stat: "politicalCapital",
-              value: -5, // subtract 5
+              value: -5,
+            ),
+            ScenarioEffect(
+              stat: "publicTrust",
+              value: 5,
+            ),
+          ],
+        ),
+        ScenarioChoice(
+          text: "I can't give him a government job, Mama. It wouldn't be right.",
+          nextId: "node_5",
+          effects: [
+            ScenarioEffect(
+              stat: "politicalCapital",
+              value: -10,
+            ),
+            ScenarioEffect(
+              stat: "publicTrust",
+              value: 10,
             ),
           ],
         ),
@@ -250,60 +282,226 @@ class ScenarioGraph {
 
     "node_5": ScenarioNode(
       id: "node_5",
-      title: "The Crisis",
-      description:
-          "Disaster strikes! Due to previous budget cuts and poor contracts, a major bridge has collapsed during rush hour.",
+      title: "Decision 5: The Journalist",
+      description: "This could end your career. What do you want to do?",
       choices: [
         ScenarioChoice(
-          text: "Take Responsibility and Resign",
-          nextId: "ending_resigned",
-          effects: [],
+          text: "Confess everything. Schedule a press conference.",
+          nextId: "ending_whistleblower",
+          effects: [
+            ScenarioEffect(
+              stat: "publicTrust",
+              value: 30,
+            ),
+            ScenarioEffect(
+              stat: "politicalCapital",
+              value: -50,
+            ),
+          ],
         ),
         ScenarioChoice(
-          text: "Blame the previous administration",
-          nextId: "ending_survived",
+          text: "Offer her money. Everyone has a price.",
+          nextId: "node_6_check", // Check if bridge should collapse
+          effects: [
+            ScenarioEffect(
+              stat: "personalWealth",
+              value: -20,
+            ),
+            ScenarioEffect(
+              stat: "corruptionLevel",
+              value: 20,
+            ),
+          ],
+        ),
+        ScenarioChoice(
+          text: "Have her... dealt with. Make the story go away.",
+          nextId: "node_6_check", // Check if bridge should collapse
           effects: [
             ScenarioEffect(
               stat: "corruptionLevel",
-              value: 5, // add 5
+              value: 30,
             ),
             ScenarioEffect(
               stat: "publicTrust",
-              value: -10, // subtract 10
+              value: -30,
+            ),
+          ],
+        ),
+        ScenarioChoice(
+          text: "Work with her. Expose the whole corrupt system.",
+          nextId: "ending_whistleblower",
+          effects: [
+            ScenarioEffect(
+              stat: "publicTrust",
+              value: 20,
+            ),
+            ScenarioEffect(
+              stat: "politicalCapital",
+              value: -40,
             ),
           ],
         ),
       ],
     ),
 
-    "ending_resigned": ScenarioNode(
-      id: "ending_resigned",
-      title: "Ending: The Martyr",
-      description:
-          "You resigned to save your integrity. Your career is over, but you are remembered as one of the few honest leaders. GAME OVER.",
+    // This node checks if infrastructure is bad enough for bridge collapse
+    "node_6_check": ScenarioNode(
+      id: "node_6_check",
+      title: "Months Pass...",
+      description: "Time will tell the consequences of your choices.",
       choices: [
         ScenarioChoice(
-          text: "Play Again",
-          nextId: "start",
+          text: "Continue...",
+          nextId: "node_6", // Will be handled by story_screen logic
+          effects: [],
+        ),
+      ],
+    ),
+
+    "node_6": ScenarioNode(
+      id: "node_6",
+      title: "Decision 6: The Crisis - Bridge Collapse",
+      description: "The press conference is in one hour. What will you say?",
+      choices: [
+        ScenarioChoice(
+          text: "Take full responsibility. Resign immediately.",
+          nextId: "ending_martyr",
           effects: [
-            // Stat resets now handled in code when nextId == "start"
+            ScenarioEffect(
+              stat: "publicTrust",
+              value: 20,
+            ),
+          ],
+        ),
+        ScenarioChoice(
+          text: "Blame the previous administration and the contractor.",
+          nextId: "ending_survivor",
+          effects: [
+            ScenarioEffect(
+              stat: "corruptionLevel",
+              value: 5,
+            ),
+            ScenarioEffect(
+              stat: "publicTrust",
+              value: -10,
+            ),
+            ScenarioEffect(
+              stat: "politicalCapital",
+              value: 5,
+            ),
+          ],
+        ),
+        ScenarioChoice(
+          text: "Cover it up. Pay off the families quietly.",
+          nextId: "ending_corruptor",
+          effects: [
+            ScenarioEffect(
+              stat: "personalWealth",
+              value: -30,
+            ),
+            ScenarioEffect(
+              stat: "corruptionLevel",
+              value: 20,
+            ),
           ],
         ),
       ],
     ),
 
-    "ending_survived": ScenarioNode(
-      id: "ending_survived",
-      title: "Ending: The Pragmatic Survivor",
-      description:
-          "You survived the scandal, but at what cost? You are still Governor, but the people trust you less, and the corruption is growing. GAME OVER.",
+    // Alternative node_6 for clean infrastructure path
+    "node_6_clean": ScenarioNode(
+      id: "node_6_clean",
+      title: "Decision 6: Economic Pressure",
+      description: "Your term is coming to an end. The party wants answers about your performance.",
+      choices: [
+        ScenarioChoice(
+          text: "Stand by my record. I kept my integrity.",
+          nextId: "ending_reformer",
+          effects: [
+            ScenarioEffect(
+              stat: "publicTrust",
+              value: 10,
+            ),
+          ],
+        ),
+        ScenarioChoice(
+          text: "Make compromises now to secure re-election.",
+          nextId: "ending_survivor",
+          effects: [
+            ScenarioEffect(
+              stat: "corruptionLevel",
+              value: 10,
+            ),
+            ScenarioEffect(
+              stat: "politicalCapital",
+              value: 20,
+            ),
+          ],
+        ),
+      ],
+    ),
+
+    "ending_martyr": ScenarioNode(
+      id: "ending_martyr",
+      title: "Ending: The Martyr",
+      description: "You resigned to save your integrity. Your career is over, but you are remembered as one of the few honest leaders. History will remember your sacrifice. GAME OVER.",
       choices: [
         ScenarioChoice(
           text: "Play Again",
-          nextId: "start",
-          effects: [
-            // Stat resets now handled in code when nextId == "start"
-          ],
+          nextId: "node_1",
+          effects: [],
+        ),
+      ],
+    ),
+
+    "ending_survivor": ScenarioNode(
+      id: "ending_survivor",
+      title: "Ending: The Pragmatic Survivor",
+      description: "You survived the scandal, but at what cost? You are still Governor, but the people trust you less. The corruption is growing, and your conscience weighs heavy. GAME OVER.",
+      choices: [
+        ScenarioChoice(
+          text: "Play Again",
+          nextId: "node_1",
+          effects: [],
+        ),
+      ],
+    ),
+
+    "ending_corruptor": ScenarioNode(
+      id: "ending_corruptor",
+      title: "Ending: The Comfortable Corruptor",
+      description: "You're wealthy, your family is secure. But infrastructure is failing, schools are closed, and people are suffering. You live in your mansion, but the guilt never leaves. GAME OVER.",
+      choices: [
+        ScenarioChoice(
+          text: "Play Again",
+          nextId: "node_1",
+          effects: [],
+        ),
+      ],
+    ),
+
+    "ending_whistleblower": ScenarioNode(
+      id: "ending_whistleblower",
+      title: "Ending: The Whistleblower",
+      description: "You exposed the corruption, but your career is destroyed. Your family faces threats. Yet you triggered real investigations. Reform is possible. You paid the price for truth. GAME OVER.",
+      choices: [
+        ScenarioChoice(
+          text: "Play Again",
+          nextId: "node_1",
+          effects: [],
+        ),
+      ],
+    ),
+
+    "ending_reformer": ScenarioNode(
+      id: "ending_reformer",
+      title: "Ending: The Reformer",
+      description: "You took the hard path. You stayed clean and still made progress. It wasn't easy, and you made sacrifices. But change is possible. You proved it can be done. GAME OVER.",
+      choices: [
+        ScenarioChoice(
+          text: "Play Again",
+          nextId: "node_1",
+          effects: [],
         ),
       ],
     ),

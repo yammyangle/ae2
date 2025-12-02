@@ -11,7 +11,6 @@ import 'stats_bar.dart';
 
 enum StoryPhase { dayIntro, dialogue, decision }
 
-// Add this enum for better type safety
 enum StatType {
   corruptionLevel,
   publicTrust,
@@ -28,7 +27,7 @@ class StoryScreen extends StatefulWidget {
 }
 
 class _ActiveStatEffect {
-  final StatType stat;    // Use enum instead of String
+  final StatType stat;
   final double value;
   final bool positive;
 
@@ -44,14 +43,17 @@ class _StoryScreenState extends State<StoryScreen> {
   static const double minStatValue = -100;
   static const double maxStatValue = 100;
 
-  String _currentNodeId = "start";
+  String _currentNodeId = "node_1";  // Skip straight to node_1
   StoryPhase _phase = StoryPhase.dayIntro;
+
+  // Track which dialogue beat we're on
+  int _currentBeatIndex = 0;
+  int _currentLineIndex = 0;
 
   List<_ActiveStatEffect> _activeEffects = [];
   bool _effectsVisible = false;
   int _currentDay = 1;
 
-  // Initialize stats with proper bounds
   double corruptionLevel = 0;
   double publicTrust = 50;
   double personalWealth = -50;
@@ -66,6 +68,8 @@ class _StoryScreenState extends State<StoryScreen> {
 
   ScenarioNode get _currentNode => ScenarioGraph.getNode(_currentNodeId);
   NodePresentation get _present => NodePresentationConfig.forId(_currentNodeId);
+  
+  DialogueBeat get _currentBeat => _present.beats[_currentBeatIndex];
 
   @override
   void initState() {
@@ -80,8 +84,6 @@ class _StoryScreenState extends State<StoryScreen> {
     _typingTimer?.cancel();
     super.dispose();
   }
-
-  // ───────────── TYPEWRITER HELPERS ─────────────
 
   void _startTyping(String text, {int speedMs = 35}) {
     _typingTimer?.cancel();
@@ -113,18 +115,15 @@ class _StoryScreenState extends State<StoryScreen> {
   }
 
   void _startDayIntroTyping() {
-    final dayText = "Day $_currentDay in office...";
+    final dayText = "Day ${_present.dayNumber} in office...";
     _startTyping(dayText, speedMs: 45);
   }
 
-  void _startDialogueTyping() {
-    final text = _present.dialogueLines.join("\n");
-    _startTyping(text, speedMs: 25);
+  void _startCurrentLineTyping() {
+    final line = _currentBeat.lines[_currentLineIndex];
+    _startTyping(line, speedMs: 25);
   }
 
-  // ───────────── STAT MANAGEMENT ─────────────
-
-  // Add this missing method
   _ActiveStatEffect? _effectForStat(StatType statType) {
     try {
       return _activeEffects.firstWhere((effect) => effect.stat == statType);
@@ -133,7 +132,7 @@ class _StoryScreenState extends State<StoryScreen> {
     }
   }
 
-  void _updateStat(StatType statType, int change) { // Changed to int
+  void _updateStat(StatType statType, int change) {
     setState(() {
       switch (statType) {
         case StatType.corruptionLevel:
@@ -173,15 +172,14 @@ class _StoryScreenState extends State<StoryScreen> {
         return StatType.politicalCapital;
       default:
         debugPrint("Unknown stat string: $statString");
-        return StatType.publicTrust; // default fallback
+        return StatType.publicTrust;
     }
   }
-
-  // ───────────── FLOW CONTROL ─────────────
 
   void _onBackgroundTap() {
     if (_phase == StoryPhase.decision) return;
 
+    // If still typing, finish instantly
     if (!_finishedTyping) {
       _typingTimer?.cancel();
       setState(() {
@@ -191,35 +189,59 @@ class _StoryScreenState extends State<StoryScreen> {
       return;
     }
 
-    setState(() {
-      if (_phase == StoryPhase.dayIntro) {
+    // Move through dialogue
+    if (_phase == StoryPhase.dayIntro) {
+      setState(() {
         _phase = StoryPhase.dialogue;
-        _startDialogueTyping();
-      } else if (_phase == StoryPhase.dialogue) {
-        _phase = StoryPhase.decision;
+        _currentBeatIndex = 0;
+        _currentLineIndex = 0;
+      });
+      _startCurrentLineTyping();
+      return;
+    }
+
+    if (_phase == StoryPhase.dialogue) {
+      // Check if there are more lines in current beat
+      if (_currentLineIndex < _currentBeat.lines.length - 1) {
+        setState(() {
+          _currentLineIndex++;
+        });
+        _startCurrentLineTyping();
+        return;
       }
-    });
+
+      // Check if there are more beats
+      if (_currentBeatIndex < _present.beats.length - 1) {
+        setState(() {
+          _currentBeatIndex++;
+          _currentLineIndex = 0;
+        });
+        _startCurrentLineTyping();
+        return;
+      }
+
+      // All dialogue done, move to decision
+      setState(() {
+        _phase = StoryPhase.decision;
+      });
+    }
   }
 
   void _onDecisionSelected(DecisionOption option) {
     final node = _currentNode;
     final ScenarioChoice choice = node.choices[option.id];
 
-    // 1) Apply effects (update stats) AND create bubbles for those effects
     _triggerEffectBubbles(choice.effects);
 
-    // 2) Stay on decision screen while bubbles are visible
     setState(() {
       _phase = StoryPhase.decision;
     });
 
-    // 3) After animation, move to next node & day intro
     Future.delayed(const Duration(milliseconds: 1100), () {
       if (!mounted) return;
 
       setState(() {
         if (choice.nextId == "start") {
-          // Restart scenario
           _currentDay = 1;
           corruptionLevel = 0;
           publicTrust = 50;
@@ -230,8 +252,22 @@ class _StoryScreenState extends State<StoryScreen> {
           _currentDay += 1;
         }
 
-        _currentNodeId = choice.nextId;
+        // Check if we should route to bridge collapse or clean path
+        String nextNode = choice.nextId;
+        if (nextNode == "node_6_check") {
+          // If infrastructure is very bad (< 20), bridge collapses
+          // Otherwise, go to clean ending path
+          if (infrastructureQuality < 20) {
+            nextNode = "node_6"; // Bridge collapse crisis
+          } else {
+            nextNode = "node_6_clean"; // Clean path, no crisis
+          }
+        }
+
+        _currentNodeId = nextNode;
         _phase = StoryPhase.dayIntro;
+        _currentBeatIndex = 0;
+        _currentLineIndex = 0;
       });
 
       _startDayIntroTyping();
@@ -243,20 +279,17 @@ class _StoryScreenState extends State<StoryScreen> {
 
     final newEffects = <_ActiveStatEffect>[];
 
-    // 1) Update stats AND build bubble models
     setState(() {
       for (final e in effects) {
         final statType = _stringToStatType(e.stat);
         
-        // Update the stat - e.value is int
         _updateStat(statType, e.value);
 
-        // Build a bubble for this effect
         if (e.value != 0) {
           newEffects.add(
             _ActiveStatEffect(
               stat: statType,
-              value: e.value.abs().toDouble(), // Convert int to double
+              value: e.value.abs().toDouble(),
               positive: e.value > 0,
             ),
           );
@@ -269,7 +302,6 @@ class _StoryScreenState extends State<StoryScreen> {
 
     if (newEffects.isEmpty) return;
 
-    // 2) Show them, then make them float & fade
     Future.delayed(const Duration(milliseconds: 800), () {
       if (!mounted) return;
       setState(() {
@@ -293,7 +325,7 @@ class _StoryScreenState extends State<StoryScreen> {
         DecisionOption(
           id: i,
           text: choice.text,
-          effect: "", // we use ScenarioEffect instead
+          effect: "",
         ),
       );
     }
@@ -302,11 +334,9 @@ class _StoryScreenState extends State<StoryScreen> {
       id: 0,
       question: node.description,
       options: options,
-      background: _present.background,
+      background: _currentBeat.background,
     );
   }
-
-  // ───────────── BUILD UI ─────────────
 
   @override
   Widget build(BuildContext context) {
@@ -354,7 +384,7 @@ class _StoryScreenState extends State<StoryScreen> {
                 children: [
                   Positioned.fill(
                     child: Image.asset(
-                      _present.background,
+                      _currentBeat.background,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -400,6 +430,9 @@ class _StoryScreenState extends State<StoryScreen> {
   }
 
   Widget _buildDialogueBox(double screenHeight) {
+    final beat = _currentBeat;
+    final boxColor = Color(beat.color);
+    
     return Container(
       height: screenHeight * 0.45,
       width: double.infinity,
@@ -415,41 +448,42 @@ class _StoryScreenState extends State<StoryScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: double.infinity,
-                  height: 45,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFC1121F),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Color(0xFF780000),
-                        width: 2,
+                if (beat.speaker.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    height: 45,
+                    decoration: BoxDecoration(
+                      color: boxColor,
+                      border: const Border(
+                        bottom: BorderSide(
+                          color: Color(0xFF780000),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.only(
+                      left: portraitSize + 7,
+                      bottom: 2,
+                    ),
+                    alignment: Alignment.bottomLeft,
+                    child: Text(
+                      beat.speaker,
+                      style: GoogleFonts.pixelifySans(
+                        textStyle: const TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFFDF0D5),
+                          shadows: [
+                            Shadow(
+                              color: Color(0xFF780000),
+                              offset: Offset(2, 2),
+                              blurRadius: 1,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  padding: const EdgeInsets.only(
-                    left: portraitSize + 7,
-                    bottom: 2,
-                  ),
-                  alignment: Alignment.bottomLeft,
-                  child: Text(
-                    _present.characterName,
-                    style: GoogleFonts.pixelifySans(
-                      textStyle: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFFDF0D5),
-                        shadows: [
-                          Shadow(
-                            color: Color(0xFF780000),
-                            offset: Offset(2, 2),
-                            blurRadius: 1,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 8),
                 Expanded(
                   child: Padding(
@@ -482,7 +516,7 @@ class _StoryScreenState extends State<StoryScreen> {
                 height: portraitSize,
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: const Color(0xFFC1121F),
+                    color: boxColor,
                     width: 4,
                   ),
                   boxShadow: [
@@ -494,7 +528,7 @@ class _StoryScreenState extends State<StoryScreen> {
                     ),
                   ],
                   image: DecorationImage(
-                    image: AssetImage(_present.portrait),
+                    image: AssetImage(beat.portrait),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -538,37 +572,35 @@ class _StoryScreenState extends State<StoryScreen> {
   }
 
   List<Widget> _buildEffectRow() {
-  // FIXED ORDER: This must match EXACTLY the StatsBar layout
-  // Based on your description: Corruption → Trust → Infrastructure → Capital → Wealth
-  const statsOrder = [
-    StatType.corruptionLevel,      // 1st: Corruption Level
-    StatType.publicTrust,          // 2nd: Public Trust
-    StatType.infrastructureQuality, // 3rd: Infrastructure Quality
-    StatType.politicalCapital,     // 4th: Political Capital
-    StatType.personalWealth,       // 5th: Personal Wealth
-  ];
+    const statsOrder = [
+      StatType.corruptionLevel,
+      StatType.publicTrust,
+      StatType.infrastructureQuality,
+      StatType.politicalCapital,
+      StatType.personalWealth,
+    ];
 
-  return statsOrder.map((stat) {
-    final effect = _effectForStat(stat);
+    return statsOrder.map((stat) {
+      final effect = _effectForStat(stat);
 
-    if (effect == null) {
-      return const SizedBox(
-        width: 28,
-        height: 28,
-      );
-    }
+      if (effect == null) {
+        return const SizedBox(
+          width: 28,
+          height: 28,
+        );
+      }
 
-    return AnimatedSlide(
-      duration: const Duration(milliseconds: 400),
-      offset: _effectsVisible
-          ? Offset.zero
-          : const Offset(0, -0.5),
-      child: AnimatedOpacity(
+      return AnimatedSlide(
         duration: const Duration(milliseconds: 400),
-        opacity: _effectsVisible ? 1.0 : 0.0,
-        child: _buildEffectBubble(effect),
-      ),
-    );
-  }).toList();
-}
+        offset: _effectsVisible
+            ? Offset.zero
+            : const Offset(0, -0.5),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 400),
+          opacity: _effectsVisible ? 1.0 : 0.0,
+          child: _buildEffectBubble(effect),
+        ),
+      );
+    }).toList();
+  }
 }

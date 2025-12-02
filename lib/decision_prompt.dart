@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'decision.dart';
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:auto_size_text/auto_size_text.dart';
 
 class DecisionPrompt extends StatelessWidget {
   final Decision decision;
@@ -29,11 +28,10 @@ class DecisionPrompt extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(2),
         child: Stack(
-          clipBehavior: Clip.none, // allow overlap outside cream box
+          clipBehavior: Clip.none,
           children: [
             // ================== OPTIONS BELOW ==================
             Padding(
-              // leave room at the top for the overlapping question box
               padding: const EdgeInsets.only(top: 70),
               child: GridView.builder(
                 shrinkWrap: true,
@@ -43,6 +41,7 @@ class DecisionPrompt extends StatelessWidget {
                   crossAxisCount: decision.options.length <= 2 ? 1 : 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
+                  // FIXED: Increased aspect ratio for taller buttons
                   childAspectRatio: decision.options.length == 2 ? 3 : 1.5,
                 ),
                 itemCount: decision.options.length,
@@ -55,7 +54,7 @@ class DecisionPrompt extends StatelessWidget {
 
             // ================== OVERLAPPING QUESTION BOX ==================
             Positioned(
-              top: -40, // move up so it hangs out of the cream box
+              top: -40,
               left: -10,
               right: -10,
               child: Container(
@@ -77,13 +76,13 @@ class DecisionPrompt extends StatelessWidget {
                   decision.question,
                   style: GoogleFonts.pixelifySans(
                     textStyle: const TextStyle(
-                      fontSize: 22,         // max size
+                      fontSize: 22,
                       color: Color(0xFFFDF0D5),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  maxLines: 3,             // fits full question in 3 lines
-                  minFontSize: 12,         // will shrink if needed
+                  maxLines: 3,
+                  minFontSize: 12,
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -100,9 +99,10 @@ class DecisionPrompt extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF669BBC), // Light blue
         foregroundColor: const Color(0xFF003049), // Deep blue text
+        // FIXED: Increased padding for more space
         padding: const EdgeInsets.symmetric(
-          vertical: 6,
-          horizontal: 2,
+          vertical: 12,
+          horizontal: 8,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
@@ -114,17 +114,19 @@ class DecisionPrompt extends StatelessWidget {
         elevation: 4,
         shadowColor: const Color(0xFF780000).withOpacity(0.5),
       ),
-      child: Text(
+      // FIXED: Using AutoSizeText for better text fitting
+      child: AutoSizeText(
         option.text,
         style: GoogleFonts.pixelifySans(
           textStyle: const TextStyle(
-            fontSize: 18,
+            fontSize: 16, // Slightly smaller default size
             fontWeight: FontWeight.w600,
           ),
         ),
         textAlign: TextAlign.center,
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
+        maxLines: 5, // Allow more lines
+        minFontSize: 12, // Will shrink if needed
+        overflow: TextOverflow.visible,
       ),
     );
   }
