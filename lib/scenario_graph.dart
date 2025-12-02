@@ -27,13 +27,11 @@ class ScenarioChoice {
 }
 
 class ScenarioEffect {
-  final String stat;      // e.g. "publicTrust"
-  final String operation; // "add", "subtract", "set"
-  final double value;
+  final String stat;   // e.g. "publicTrust"
+  final int value;     // e.g. +10, -20, etc.
 
   const ScenarioEffect({
     required this.stat,
-    required this.operation,
     required this.value,
   });
 }
@@ -53,8 +51,7 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "politicalCapital",
-              operation: "add",
-              value: 10.0,
+              value: 10, // was add 10
             ),
           ],
         ),
@@ -73,13 +70,11 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "publicTrust",
-              operation: "add",
-              value: 10.0,
+              value: 10, // add 10
             ),
             ScenarioEffect(
               stat: "politicalCapital",
-              operation: "subtract",
-              value: 20.0,
+              value: -20, // subtract 20
             ),
           ],
         ),
@@ -89,13 +84,11 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "corruptionLevel",
-              operation: "add",
-              value: 15.0,
+              value: 15, // add 15
             ),
             ScenarioEffect(
               stat: "publicTrust",
-              operation: "subtract",
-              value: 5.0,
+              value: -5, // subtract 5
             ),
           ],
         ),
@@ -105,13 +98,11 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "corruptionLevel",
-              operation: "add",
-              value: 10.0,
+              value: 10, // add 10
             ),
             ScenarioEffect(
               stat: "infrastructureQuality",
-              operation: "subtract",
-              value: 10.0,
+              value: -10, // subtract 10
             ),
           ],
         ),
@@ -121,13 +112,11 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "personalWealth",
-              operation: "subtract",
-              value: 50.0,
+              value: -50, // subtract 50
             ),
             ScenarioEffect(
               stat: "politicalCapital",
-              operation: "add",
-              value: 5.0,
+              value: 5, // add 5
             ),
           ],
         ),
@@ -146,8 +135,7 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "publicTrust",
-              operation: "subtract",
-              value: 20.0,
+              value: -20, // subtract 20
             ),
           ],
         ),
@@ -157,13 +145,11 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "publicTrust",
-              operation: "add",
-              value: 5.0,
+              value: 5, // add 5
             ),
             ScenarioEffect(
               stat: "infrastructureQuality",
-              operation: "subtract",
-              value: 15.0,
+              value: -15, // subtract 15
             ),
           ],
         ),
@@ -173,18 +159,15 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "personalWealth",
-              operation: "add",
-              value: 20.0,
+              value: 20, // add 20
             ),
             ScenarioEffect(
               stat: "corruptionLevel",
-              operation: "add",
-              value: 10.0,
+              value: 10, // add 10
             ),
             ScenarioEffect(
               stat: "publicTrust",
-              operation: "subtract",
-              value: 10.0,
+              value: -10, // subtract 10
             ),
           ],
         ),
@@ -203,18 +186,15 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "personalWealth",
-              operation: "add",
-              value: 20.0,
+              value: 20, // add 20
             ),
             ScenarioEffect(
               stat: "infrastructureQuality",
-              operation: "subtract",
-              value: 25.0,
+              value: -25, // subtract 25
             ),
             ScenarioEffect(
               stat: "corruptionLevel",
-              operation: "add",
-              value: 20.0,
+              value: 20, // add 20
             ),
           ],
         ),
@@ -224,13 +204,11 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "politicalCapital",
-              operation: "subtract",
-              value: 10.0,
+              value: -10, // subtract 10
             ),
             ScenarioEffect(
               stat: "infrastructureQuality",
-              operation: "add",
-              value: 10.0,
+              value: 10, // add 10
             ),
           ],
         ),
@@ -249,13 +227,11 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "corruptionLevel",
-              operation: "add",
-              value: 10.0,
+              value: 10, // add 10
             ),
             ScenarioEffect(
               stat: "infrastructureQuality",
-              operation: "subtract",
-              value: 5.0,
+              value: -5, // subtract 5
             ),
           ],
         ),
@@ -265,8 +241,7 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "politicalCapital",
-              operation: "subtract",
-              value: 5.0,
+              value: -5, // subtract 5
             ),
           ],
         ),
@@ -290,13 +265,11 @@ class ScenarioGraph {
           effects: [
             ScenarioEffect(
               stat: "corruptionLevel",
-              operation: "add",
-              value: 5.0,
+              value: 5, // add 5
             ),
             ScenarioEffect(
               stat: "publicTrust",
-              operation: "subtract",
-              value: 10.0,
+              value: -10, // subtract 10
             ),
           ],
         ),
@@ -313,11 +286,7 @@ class ScenarioGraph {
           text: "Play Again",
           nextId: "start",
           effects: [
-            ScenarioEffect(stat: "corruptionLevel", operation: "set", value: 0.0),
-            ScenarioEffect(stat: "publicTrust", operation: "set", value: 50.0),
-            ScenarioEffect(stat: "personalWealth", operation: "set", value: -50.0),
-            ScenarioEffect(stat: "infrastructureQuality", operation: "set", value: 50.0),
-            ScenarioEffect(stat: "politicalCapital", operation: "set", value: 50.0),
+            // Stat resets now handled in code when nextId == "start"
           ],
         ),
       ],
@@ -333,11 +302,7 @@ class ScenarioGraph {
           text: "Play Again",
           nextId: "start",
           effects: [
-            ScenarioEffect(stat: "corruptionLevel", operation: "set", value: 0.0),
-            ScenarioEffect(stat: "publicTrust", operation: "set", value: 50.0),
-            ScenarioEffect(stat: "personalWealth", operation: "set", value: -50.0),
-            ScenarioEffect(stat: "infrastructureQuality", operation: "set", value: 50.0),
-            ScenarioEffect(stat: "politicalCapital", operation: "set", value: 50.0),
+            // Stat resets now handled in code when nextId == "start"
           ],
         ),
       ],
