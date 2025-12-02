@@ -9,6 +9,8 @@ import 'decision.dart';
 import 'decision_prompt.dart';
 import 'stats_bar.dart';
 
+
+
 enum StoryPhase { dayIntro, dialogue, decision }
 
 enum StatType {
@@ -38,15 +40,39 @@ class _ActiveStatEffect {
   });
 }
 
+// History state for back button
+class _HistoryState {
+  final String nodeId;
+  final int beatIndex;
+  final int lineIndex;
+  final StoryPhase phase;
+  final double corruptionLevel;
+  final double publicTrust;
+  final double personalWealth;
+  final double infrastructureQuality;
+  final double politicalCapital;
+
+  _HistoryState({
+    required this.nodeId,
+    required this.beatIndex,
+    required this.lineIndex,
+    required this.phase,
+    required this.corruptionLevel,
+    required this.publicTrust,
+    required this.personalWealth,
+    required this.infrastructureQuality,
+    required this.politicalCapital,
+  });
+}
+
 class _StoryScreenState extends State<StoryScreen> {
   static const double portraitSize = 150;
   static const double minStatValue = -100;
   static const double maxStatValue = 100;
 
-  String _currentNodeId = "node_1";  // Skip straight to node_1
+  String _currentNodeId = "node_1";
   StoryPhase _phase = StoryPhase.dayIntro;
 
-  // Track which dialogue beat we're on
   int _currentBeatIndex = 0;
   int _currentLineIndex = 0;
 
@@ -66,6 +92,9 @@ class _StoryScreenState extends State<StoryScreen> {
   int _charIndex = 0;
   bool _finishedTyping = false;
 
+  // History for back button
+  final List<_HistoryState> _history = [];
+
   ScenarioNode get _currentNode => ScenarioGraph.getNode(_currentNodeId);
   NodePresentation get _present => NodePresentationConfig.forId(_currentNodeId);
   
@@ -83,6 +112,44 @@ class _StoryScreenState extends State<StoryScreen> {
   void dispose() {
     _typingTimer?.cancel();
     super.dispose();
+  }
+
+  void _saveCurrentState() {
+    _history.add(_HistoryState(
+      nodeId: _currentNodeId,
+      beatIndex: _currentBeatIndex,
+      lineIndex: _currentLineIndex,
+      phase: _phase,
+      corruptionLevel: corruptionLevel,
+      publicTrust: publicTrust,
+      personalWealth: personalWealth,
+      infrastructureQuality: infrastructureQuality,
+      politicalCapital: politicalCapital,
+    ));
+  }
+
+  void _goBack() {
+    if (_history.isEmpty) return;
+
+    final previousState = _history.removeLast();
+    
+    setState(() {
+      _currentNodeId = previousState.nodeId;
+      _currentBeatIndex = previousState.beatIndex;
+      _currentLineIndex = previousState.lineIndex;
+      _phase = previousState.phase;
+      corruptionLevel = previousState.corruptionLevel;
+      publicTrust = previousState.publicTrust;
+      personalWealth = previousState.personalWealth;
+      infrastructureQuality = previousState.infrastructureQuality;
+      politicalCapital = previousState.politicalCapital;
+    });
+
+    if (_phase == StoryPhase.dayIntro) {
+      _startDayIntroTyping();
+    } else if (_phase == StoryPhase.dialogue) {
+      _startCurrentLineTyping();
+    }
   }
 
   void _startTyping(String text, {int speedMs = 35}) {
@@ -179,7 +246,6 @@ class _StoryScreenState extends State<StoryScreen> {
   void _onBackgroundTap() {
     if (_phase == StoryPhase.decision) return;
 
-    // If still typing, finish instantly
     if (!_finishedTyping) {
       _typingTimer?.cancel();
       setState(() {
@@ -189,8 +255,10 @@ class _StoryScreenState extends State<StoryScreen> {
       return;
     }
 
-    // Move through dialogue
     if (_phase == StoryPhase.dayIntro) {
+      // Save state before moving to dialogue
+      _saveCurrentState();
+      
       setState(() {
         _phase = StoryPhase.dialogue;
         _currentBeatIndex = 0;
@@ -203,6 +271,9 @@ class _StoryScreenState extends State<StoryScreen> {
     if (_phase == StoryPhase.dialogue) {
       // Check if there are more lines in current beat
       if (_currentLineIndex < _currentBeat.lines.length - 1) {
+        // Save state before moving to next line
+        _saveCurrentState();
+        
         setState(() {
           _currentLineIndex++;
         });
@@ -212,6 +283,9 @@ class _StoryScreenState extends State<StoryScreen> {
 
       // Check if there are more beats
       if (_currentBeatIndex < _present.beats.length - 1) {
+        // Save state before moving to next beat
+        _saveCurrentState();
+        
         setState(() {
           _currentBeatIndex++;
           _currentLineIndex = 0;
@@ -221,6 +295,8 @@ class _StoryScreenState extends State<StoryScreen> {
       }
 
       // All dialogue done, move to decision
+      _saveCurrentState();
+      
       setState(() {
         _phase = StoryPhase.decision;
       });
@@ -248,19 +324,17 @@ class _StoryScreenState extends State<StoryScreen> {
           personalWealth = -50;
           infrastructureQuality = 50;
           politicalCapital = 50;
+          _history.clear(); // Clear history on restart
         } else {
           _currentDay += 1;
         }
 
-        // Check if we should route to bridge collapse or clean path
         String nextNode = choice.nextId;
         if (nextNode == "node_6_check") {
-          // If infrastructure is very bad (< 20), bridge collapses
-          // Otherwise, go to clean ending path
           if (infrastructureQuality < 20) {
-            nextNode = "node_6"; // Bridge collapse crisis
+            nextNode = "node_6";
           } else {
-            nextNode = "node_6_clean"; // Clean path, no crisis
+            nextNode = "node_6_clean";
           }
         }
 
@@ -347,87 +421,148 @@ class _StoryScreenState extends State<StoryScreen> {
     if (_phase == StoryPhase.dayIntro) {
       return Scaffold(
         backgroundColor: const Color(0xFF003049),
-        body: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _onBackgroundTap,
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Text(
-                _displayedText,
-                style: GoogleFonts.pixelifySans(
-                  textStyle: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFFDF0D5),
+        body: Stack(
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _onBackgroundTap,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Text(
+                    _displayedText,
+                    style: GoogleFonts.pixelifySans(
+                      textStyle: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFFDF0D5),
+                      ),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
-          ),
+            if (_history.isNotEmpty)
+              Positioned(
+                bottom: 40,
+                left: 10,
+                child: _buildBackButton(),
+              ),
+          ],
         ),
       );
     }
 
     return Scaffold(
       backgroundColor: const Color(0xFF003049),
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _onBackgroundTap,
-        child: Column(
-          children: [
-            SizedBox(
-              height: screenHeight * 0.55,
-              width: double.infinity,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Image.asset(
-                      _currentBeat.background,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        StatsBar(
-                          corruptionLevel: corruptionLevel,
-                          publicTrust: publicTrust,
-                          personalWealth: personalWealth,
-                          infrastructureQuality: infrastructureQuality,
-                          politicalCapital: politicalCapital,
+      body: Stack(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _onBackgroundTap,
+            child: Column(
+              children: [
+                SizedBox(
+                  height: screenHeight * 0.55,
+                  width: double.infinity,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Image.asset(
+                          _currentBeat.background,
+                          fit: BoxFit.cover,
                         ),
-                        const SizedBox(height: 4),
-                        SizedBox(
-                          height: 28,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: _buildEffectRow(),
-                          ),
+                      ),
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            StatsBar(
+                              corruptionLevel: corruptionLevel,
+                              publicTrust: publicTrust,
+                              personalWealth: personalWealth,
+                              infrastructureQuality: infrastructureQuality,
+                              politicalCapital: politicalCapital,
+                            ),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              height: 28,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: _buildEffectRow(),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
+                if (_phase == StoryPhase.dialogue)
+                  _buildDialogueBox(screenHeight)
+                else
+                  DecisionPrompt(
+                    decision: decision,
+                    onOptionSelected: _onDecisionSelected,
+                  ),
+              ],
+            ),
+          ),
+          // Back button overlay
+          if (_history.isNotEmpty && _phase != StoryPhase.decision)
+            Positioned(
+              bottom: 40,
+              left: 10,
+              child: _buildBackButton(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _goBack,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFDF0D5),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: const Color(0xFF003049),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF780000).withOpacity(0.5),
+                blurRadius: 4,
+                offset: const Offset(2, 2),
+              ),
+            ],
+          ),
+          child: Text(
+            '<-',
+            style: GoogleFonts.pixelifySans(
+              textStyle: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF003049),
+                height: 0.5,
               ),
             ),
-            if (_phase == StoryPhase.dialogue)
-              _buildDialogueBox(screenHeight)
-            else
-              DecisionPrompt(
-                decision: decision,
-                onOptionSelected: _onDecisionSelected,
-              ),
-          ],
+          ),
         ),
       ),
     );
   }
+
 
   Widget _buildDialogueBox(double screenHeight) {
     final beat = _currentBeat;
