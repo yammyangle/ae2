@@ -30,6 +30,6 @@ flutter:
     - assets/images/Background/
     - assets/images/Main Characters/Mask Dude/
     - assets/images/Items/Fruits/
-    - assets/images/HUD/
+    - assets/images/Traps/Saw/
 
 shared_preferences: ^2.5.3
