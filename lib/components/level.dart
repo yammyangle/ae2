@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flame/components.dart';
 import 'package:flame_tiled/flame_tiled.dart';
 import 'background_tile.dart';
@@ -18,33 +17,16 @@ class Level extends World with HasGameRef<PixelAdventure> {
 
 @override
 FutureOr<void> onLoad() async {
-  print('=== Level: Starting onLoad ===');
+  level = await TiledComponent.load('$levelName.tmx', Vector2.all(16));
+  add(level);
   
-  try {
-    print('Level: Loading $levelName.tmx...');
-    level = await TiledComponent.load('$levelName.tmx', Vector2.all(16));
-    print('Level: TMX loaded, size: ${level.size}');
-
-    add(level);
-    print('Level: TMX added to world');
-
-    print('Level: Calling _scrollingBackground...');
-    _scrollingBackground();
-    
-    print('Level: Calling _spawningObjects...');
-    _spawningObjects();
-    
-    print('Level: Calling _addCollisions...');
-    _addCollisions();
-    
-    print('=== Level: onLoad complete ===');
-  } catch (e, stackTrace) {
-    print('ERROR in Level.onLoad: $e');
-    print('Stack trace: $stackTrace');
-  }
-
+  _scrollingBackground();
+  _spawningObjects();
+  _addCollisions();
+  
   return super.onLoad();
 }
+
   void _scrollingBackground() {
     final backgroundLayer = level.tileMap.getLayer('Background');
 
@@ -99,14 +81,9 @@ FutureOr<void> onLoad() async {
 
 void _addCollisions() {
   final collisionsLayer = level.tileMap.getLayer<ObjectGroup>('Collisions');
-  print('Collisions layer found: ${collisionsLayer != null}');
 
   if (collisionsLayer != null) {
-    print('Total collision objects: ${collisionsLayer.objects.length}');
-    
     for (final collision in collisionsLayer.objects) {
-      print('Collision: class=${collision.class_}, pos=(${collision.x}, ${collision.y}), size=(${collision.width}, ${collision.height})');
-      
       switch (collision.class_) {
         case 'Platform':
           final platform = CollisionBlock(
@@ -116,7 +93,6 @@ void _addCollisions() {
           );
           collisionBlocks.add(platform);
           add(platform);
-          print('✓ Platform added');
           break;
         default:
           final block = CollisionBlock(
@@ -125,7 +101,6 @@ void _addCollisions() {
           );
           collisionBlocks.add(block);
           add(block);
-          print('✓ Collision block added');
       }
     }
       player.collisionBlocks = collisionBlocks;

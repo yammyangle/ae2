@@ -62,30 +62,16 @@ class Player extends SpriteAnimationGroupComponent
 
   @override
   FutureOr<void> onLoad() {
-    print('=== Player: Starting onLoad ===');
-    print('Player position: $position');
+    _loadAllAnimations();
     
-    try {
-      _loadAllAnimations();
-      print('Player: Animations loaded');
-      
-      startingPosition = Vector2(position.x, position.y);
-      print('Player: Starting position set to $startingPosition');
+    startingPosition = Vector2(position.x, position.y);
 
-      add(RectangleHitbox(
-        position: Vector2(hitbox.offsetX, hitbox.offsetY),
-        size: Vector2(hitbox.width, hitbox.height),
-      ));
-      print('Player: Hitbox added');
-      
-      ServicesBinding.instance.keyboard.addHandler(_onKey);
-      print('Player: Keyboard handler added');
-      
-      print('=== Player: onLoad complete ===');
-    } catch (e, stackTrace) {
-      print('ERROR in Player.onLoad: $e');
-      print('Stack trace: $stackTrace');
-    }
+    add(RectangleHitbox(
+      position: Vector2(hitbox.offsetX, hitbox.offsetY),
+      size: Vector2(hitbox.width, hitbox.height),
+    ));
+    
+    ServicesBinding.instance.keyboard.addHandler(_onKey);
     
     return super.onLoad();
   }
@@ -149,11 +135,9 @@ class Player extends SpriteAnimationGroupComponent
       Set<Vector2> intersectionPoints, PositionComponent other) {
     if (!reachedCheckpoint) {
       if (other is Fruit) {
-        print('Collision with fruit!');
         other.collidedWithPlayer();
       }
       if (other is Saw) {
-        print('Collision with saw!');
         _respawn();
       }
     }
@@ -161,44 +145,27 @@ class Player extends SpriteAnimationGroupComponent
   }
 
   void _loadAllAnimations() {
-    print('Loading animations for character: $character');
-    
-    try {
-      idleAnimation = _spriteAnimation('Idle', 11);
-      print('✓ Idle animation loaded');
-      
-      runningAnimation = _spriteAnimation('Run', 12);
-      print('✓ Run animation loaded');
-      
-      jumpingAnimation = _spriteAnimation('Jump', 1);
-      print('✓ Jump animation loaded');
-      
-      fallingAnimation = _spriteAnimation('Fall', 1);
-      print('✓ Fall animation loaded');
-      
-      hitAnimation = _spriteAnimation('Hit', 7)..loop = false;
-      print('✓ Hit animation loaded');
+    idleAnimation = _spriteAnimation('Idle', 11);
+    runningAnimation = _spriteAnimation('Run', 12);
+    jumpingAnimation = _spriteAnimation('Jump', 1);
+    fallingAnimation = _spriteAnimation('Fall', 1);
+    hitAnimation = _spriteAnimation('Hit', 7)..loop = false;
 
-      // Use Hit animation for appearing/disappearing (special animations not needed)
-      appearingAnimation = hitAnimation;
-      disappearingAnimation = hitAnimation;
+    // Use Hit animation for appearing/disappearing (special animations not needed)
+    appearingAnimation = hitAnimation;
+    disappearingAnimation = hitAnimation;
 
-      animations = {
-        PlayerState.idle: idleAnimation,
-        PlayerState.running: runningAnimation,
-        PlayerState.jumping: jumpingAnimation,
-        PlayerState.falling: fallingAnimation,
-        PlayerState.hit: hitAnimation,
-        PlayerState.appearing: appearingAnimation,
-        PlayerState.disappearing: disappearingAnimation,
-      };
+    animations = {
+      PlayerState.idle: idleAnimation,
+      PlayerState.running: runningAnimation,
+      PlayerState.jumping: jumpingAnimation,
+      PlayerState.falling: fallingAnimation,
+      PlayerState.hit: hitAnimation,
+      PlayerState.appearing: appearingAnimation,
+      PlayerState.disappearing: disappearingAnimation,
+    };
 
-      current = PlayerState.idle;
-      print('All animations loaded, current state: $current');
-    } catch (e, stackTrace) {
-      print('ERROR loading animations: $e');
-      print('Stack trace: $stackTrace');
-    }
+    current = PlayerState.idle;
   }
 
   SpriteAnimation _spriteAnimation(String state, int amount) {
@@ -296,7 +263,6 @@ class Player extends SpriteAnimationGroupComponent
   }
 
   void _respawn() async {
-    print('Player: Respawning...');
     const canMoveDuration = Duration(milliseconds: 400);
     gotHit = true;
     current = PlayerState.hit;

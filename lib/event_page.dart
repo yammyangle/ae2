@@ -30,7 +30,6 @@ class _EventPageState extends State<EventPage> {
   double infrastructureQuality = 50;
   double politicalCapital = 50;
 
-
   String get _currentFullLine => widget.event.dialogue[_currentLineIndex];
 
   bool get _isTyping => _visibleChars < _currentFullLine.length;
@@ -92,8 +91,6 @@ class _EventPageState extends State<EventPage> {
 
   void _onDecisionSelected(DecisionOption selectedOption) {
     // Handle the selected decision
-    print('Selected option: ${selectedOption.text}');
-    print('Effect: ${selectedOption.effect}');
     
     // You can pass this back to the parent or handle game state changes
     // For now, just close the event page
@@ -275,11 +272,5 @@ class _EventPageState extends State<EventPage> {
         ),
       ),
     );
-
-
-
-
-
-
   }
 }
