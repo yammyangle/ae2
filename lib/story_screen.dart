@@ -11,8 +11,7 @@ import 'decision_prompt.dart';
 import 'stats_bar.dart';
 import 'dart:math'; 
 import 'package:flutter/services.dart';
-
-
+import 'main.dart'; // Import to access SavedGame and GameService
 
 enum StoryPhase { dayIntro, dialogue, decision }
 
@@ -25,7 +24,10 @@ enum StatType {
 }
 
 class StoryScreen extends StatefulWidget {
-  const StoryScreen({super.key});
+  final SavedGame? savedGame;
+  final String? startAtNode;
+
+  const StoryScreen({super.key, this.savedGame, this.startAtNode});
 
   @override
   State<StoryScreen> createState() => _StoryScreenState();
@@ -63,7 +65,6 @@ class _StoryCheckpoint {
   });
 }
 
-
 // History state for back button
 class _HistoryState {
   final String nodeId;
@@ -94,6 +95,10 @@ class _StoryScreenState extends State<StoryScreen> {
   static const double minStatValue = -100;
   static const double maxStatValue = 100;
 
+  // Save/Load related
+  String? currentGameId;
+  String? currentGameName;
+
   String _currentNodeId = "start";
   StoryPhase _phase = StoryPhase.dayIntro;
   int _currentBeatIndex = 0;
@@ -123,30 +128,103 @@ class _StoryScreenState extends State<StoryScreen> {
   
   DialogueBeat get _currentBeat => _present.beats[_currentBeatIndex];
 
-@override
-void initState() {
-  super.initState();
-  
-  // Lock to portrait
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-  // START THE ORIGINAL STORY TYPING
-  _startDayIntroTyping();
+  @override
+  void initState() {
+    super.initState();
+    
+    // Lock to portrait
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
-  // RANDOM KIDNAPPING ALERT
-  final randomDelay = Duration(seconds: 30 + Random().nextInt(15));
-  Future.delayed(randomDelay, () {
-    if (mounted) _showKidnappingAlert();
-  });
-}
+    // Load saved game if provided
+    if (widget.savedGame != null) {
+      _loadGameState(widget.savedGame!);
+    } else if (widget.startAtNode != null) {
+      // Start at a specific node (e.g., 'node_1' after victory speech)
+      _currentNodeId = widget.startAtNode!;
+    }
 
+    // START THE ORIGINAL STORY TYPING
+    _startDayIntroTyping();
+
+    // RANDOM KIDNAPPING ALERT
+    final randomDelay = Duration(seconds: 30 + Random().nextInt(15));
+    Future.delayed(randomDelay, () {
+      if (mounted) _showKidnappingAlert();
+    });
+  }
 
   @override
   void dispose() {
     _typingTimer?.cancel();
     super.dispose();
+  }
+
+  // ───────────── SAVE/LOAD FUNCTIONS ─────────────
+
+  void _loadGameState(SavedGame game) {
+    currentGameId = game.id;
+    currentGameName = game.name;
+    _currentDay = game.currentDay;
+    _currentNodeId = game.gameState['currentNodeId'] ?? 'start';
+    
+    // Load stats
+    corruptionLevel = game.gameState['corruptionLevel']?.toDouble() ?? 0;
+    publicTrust = game.gameState['publicTrust']?.toDouble() ?? 50;
+    personalWealth = game.gameState['personalWealth']?.toDouble() ?? -50;
+    infrastructureQuality = game.gameState['infrastructureQuality']?.toDouble() ?? 50;
+    politicalCapital = game.gameState['politicalCapital']?.toDouble() ?? 50;
+  }
+
+  Future<void> _saveGame() async {
+    try {
+      // If this is a new game, generate ID and name
+      if (currentGameId == null) {
+        currentGameId = GameService.generateGameId();
+        currentGameName = await GameService.getNextGameName();
+      }
+
+      // Collect all game state
+      final gameState = {
+        'currentNodeId': _currentNodeId,
+        'corruptionLevel': corruptionLevel,
+        'publicTrust': publicTrust,
+        'personalWealth': personalWealth,
+        'infrastructureQuality': infrastructureQuality,
+        'politicalCapital': politicalCapital,
+      };
+
+      final savedGame = SavedGame(
+        id: currentGameId!,
+        name: currentGameName!,
+        savedDate: DateTime.now(),
+        gameState: gameState,
+        currentDay: _currentDay,
+      );
+
+      await GameService.saveGame(savedGame);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Game saved as $currentGameName!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to save game'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _saveCurrentState() {
@@ -360,6 +438,8 @@ void initState() {
           infrastructureQuality = 50;
           politicalCapital = 50;
           _history.clear(); // Clear history on restart
+          currentGameId = null;
+          currentGameName = null;
         } else {
           _currentDay += 1;
         }
@@ -380,6 +460,9 @@ void initState() {
       });
 
       _startDayIntroTyping();
+      
+      // Auto-save after each decision
+      _saveGame();
     });
   }
 
@@ -598,7 +681,6 @@ void initState() {
     );
   }
 
-
   Widget _buildDialogueBox(double screenHeight) {
     final beat = _currentBeat;
     final boxColor = Color(beat.color);
@@ -774,203 +856,76 @@ void initState() {
     }).toList();
   }
 
-// PUT THIS METHOD FIRST (around line 600-700, before _showKidnappingAlert)
-// Also add debug prints to _handleMiniGameReturn:
-void _handleMiniGameReturn(_StoryCheckpoint savedState) {
-  print('🎊 STORY: _handleMiniGameReturn called!');
-  print('🎊 STORY: Restoring state - node: ${savedState.nodeId}, day: ${savedState.day}');
-  
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF2ECC71),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white, width: 4),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "🎉 ESCAPE SUCCESSFUL! 🎉",
-              style: GoogleFonts.pixelifySans(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "You've managed to escape the mafia's basement!\n\n"
-              "The guard dog was distracted by the oranges.\n"
-              "You return to your duties as Governor...",
-              style: GoogleFonts.pixelifySans(
-                fontSize: 16,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF2ECC71),
-              ),
-              onPressed: () {
-                print('✅ STORY: Continue Story button pressed');
-                Navigator.of(context).pop();
-                print('✅ STORY: Success dialog closed');
-                
-                setState(() {
-                  _currentNodeId = savedState.nodeId;
-                  _currentDay = savedState.day;
-                  corruptionLevel = savedState.corruptionLevel;
-                  publicTrust = savedState.publicTrust;
-                  personalWealth = savedState.personalWealth;
-                  infrastructureQuality = savedState.infrastructureQuality;
-                  politicalCapital = savedState.politicalCapital;
-                  
-                  publicTrust = _clampValue(publicTrust + 5);
-                  politicalCapital = _clampValue(politicalCapital + 5);
-                });
-                
-                print('✅ STORY: State restored successfully!');
-              },
-              child: Text(
-                "CONTINUE STORY",
-                style: GoogleFonts.pixelifySans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-// THEN PUT _showKidnappingAlert AFTER IT
-void _showKidnappingAlert() {
-  print('🚨 STORY: _showKidnappingAlert called!');
-  
-  final savedState = _StoryCheckpoint(
-    nodeId: _currentNodeId,
-    day: _currentDay,
-    corruptionLevel: corruptionLevel,
-    publicTrust: publicTrust,
-    personalWealth: personalWealth,
-    infrastructureQuality: infrastructureQuality,
-    politicalCapital: politicalCapital,
-  );
-  
-  print('💾 STORY: Saved state - node: ${savedState.nodeId}, day: ${savedState.day}');
-
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) {
-      return Dialog(
+  // MINIGAME SUCCESS HANDLER
+  void _handleMiniGameReturn(_StoryCheckpoint savedState) {
+    print('🎊 STORY: _handleMiniGameReturn called!');
+    print('🎊 STORY: Restoring state - node: ${savedState.nodeId}, day: ${savedState.day}');
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(20),
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF3E5C8),
+            color: const Color(0xFF2ECC71),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF7A5633), width: 6),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 12,
-                offset: Offset(4, 6),
-              ),
-            ],
+            border: Border.all(color: Colors.white, width: 4),
           ),
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                "⚠️ ATTENTION ⚠️",
+                "🎉 ESCAPE SUCCESSFUL! 🎉",
                 style: GoogleFonts.pixelifySans(
-                  fontSize: 26,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF4E3A23),
+                  color: Colors.white,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Text(
-                "You have been KIDNAPPED by the local mafia!\n\n"
-                "They are furious that you trespassed into their territory.\n"
-                "They have locked you in their basement and placed a mask on you.\n\n"
-                "You must collect ALL the oranges – the guard dog's favorite – "
-                "to distract him and ESCAPE!",
+                "You've managed to escape the mafia's basement!\n\n"
+                "The guard dog was distracted by the oranges.\n"
+                "You return to your duties as Governor...",
                 style: GoogleFonts.pixelifySans(
-                  fontSize: 18,
-                  height: 1.4,
-                  color: const Color(0xFF4E3A23),
+                  fontSize: 16,
+                  color: Colors.white,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 24),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF7A5633),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 6,
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF2ECC71),
                 ),
-                onPressed: () async {
-                  print('🔵 STORY: Continue button pressed');
+                onPressed: () {
+                  print('✅ STORY: Continue Story button pressed');
                   Navigator.of(context).pop();
-                  print('🔵 STORY: Dialog closed');
+                  print('✅ STORY: Success dialog closed');
                   
-                  print('🚀 STORY: Navigating to PixelAdventureScreen...');
+                  setState(() {
+                    _currentNodeId = savedState.nodeId;
+                    _currentDay = savedState.day;
+                    corruptionLevel = savedState.corruptionLevel;
+                    publicTrust = savedState.publicTrust;
+                    personalWealth = savedState.personalWealth;
+                    infrastructureQuality = savedState.infrastructureQuality;
+                    politicalCapital = savedState.politicalCapital;
+                    
+                    publicTrust = _clampValue(publicTrust + 5);
+                    politicalCapital = _clampValue(politicalCapital + 5);
+                  });
                   
-                  final completed = await Navigator.push<bool>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) {
-                        print('🏗️ STORY: Building PixelAdventureScreen with callback');
-                        return PixelAdventureScreen(
-                          onLevelComplete: () {
-                            print('🎉 CALLBACK TRIGGERED! Popping back to story...');
-                            Navigator.of(context).pop(true);
-                            print('✅ CALLBACK: Navigator.pop(true) called');
-                          },
-                        );
-                      },
-                    ),
-                  );
-
-                  print('🔙 STORY: Returned from PixelAdventureScreen with result: $completed');
-
-                  if (completed == true) {
-                    print('✅ STORY: Checkpoint completed! Calling _handleMiniGameReturn');
-                    if (mounted) {
-                      print('✅ STORY: Widget is mounted, safe to call _handleMiniGameReturn');
-                      _handleMiniGameReturn(savedState);
-                    } else {
-                      print('❌ STORY: Widget NOT mounted, cannot call _handleMiniGameReturn');
-                    }
-                  } else {
-                    print('❌ STORY: Checkpoint NOT completed (result was: $completed)');
-                  }
+                  print('✅ STORY: State restored successfully!');
                 },
                 child: Text(
-                  "CONTINUE",
+                  "CONTINUE STORY",
                   style: GoogleFonts.pixelifySans(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -978,8 +933,134 @@ void _showKidnappingAlert() {
             ],
           ),
         ),
-      );
-    },
-  );
-}
+      ),
+    );
+  }
+
+  // KIDNAPPING ALERT
+  void _showKidnappingAlert() {
+    print('🚨 STORY: _showKidnappingAlert called!');
+    
+    final savedState = _StoryCheckpoint(
+      nodeId: _currentNodeId,
+      day: _currentDay,
+      corruptionLevel: corruptionLevel,
+      publicTrust: publicTrust,
+      personalWealth: personalWealth,
+      infrastructureQuality: infrastructureQuality,
+      politicalCapital: politicalCapital,
+    );
+    
+    print('💾 STORY: Saved state - node: ${savedState.nodeId}, day: ${savedState.day}');
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3E5C8),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF7A5633), width: 6),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 12,
+                  offset: Offset(4, 6),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "⚠️ ATTENTION ⚠️",
+                  style: GoogleFonts.pixelifySans(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF4E3A23),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  "You have been KIDNAPPED by the local mafia!\n\n"
+                  "They are furious that you trespassed into their territory.\n"
+                  "They have locked you in their basement and placed a mask on you.\n\n"
+                  "You must collect ALL the oranges – the guard dog's favorite – "
+                  "to distract him and ESCAPE!",
+                  style: GoogleFonts.pixelifySans(
+                    fontSize: 18,
+                    height: 1.4,
+                    color: const Color(0xFF4E3A23),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7A5633),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 6,
+                  ),
+                  onPressed: () async {
+                    print('🔵 STORY: Continue button pressed');
+                    Navigator.of(context).pop();
+                    print('🔵 STORY: Dialog closed');
+                    
+                    print('🚀 STORY: Navigating to PixelAdventureScreen...');
+                    
+                    final completed = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) {
+                          print('🏗️ STORY: Building PixelAdventureScreen with callback');
+                          return PixelAdventureScreen(
+                            onLevelComplete: () {
+                              print('🎉 CALLBACK TRIGGERED! Popping back to story...');
+                              Navigator.of(context).pop(true);
+                              print('✅ CALLBACK: Navigator.pop(true) called');
+                            },
+                          );
+                        },
+                      ),
+                    );
+
+                    print('🔙 STORY: Returned from PixelAdventureScreen with result: $completed');
+
+                    if (completed == true) {
+                      print('✅ STORY: Checkpoint completed! Calling _handleMiniGameReturn');
+                      if (mounted) {
+                        print('✅ STORY: Widget is mounted, safe to call _handleMiniGameReturn');
+                        _handleMiniGameReturn(savedState);
+                      } else {
+                        print('❌ STORY: Widget NOT mounted, cannot call _handleMiniGameReturn');
+                      }
+                    } else {
+                      print('❌ STORY: Checkpoint NOT completed (result was: $completed)');
+                    }
+                  },
+                  child: Text(
+                    "CONTINUE",
+                    style: GoogleFonts.pixelifySans(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
