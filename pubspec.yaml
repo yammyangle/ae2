@@ -23,5 +23,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    
 
 shared_preferences: ^2.5.3

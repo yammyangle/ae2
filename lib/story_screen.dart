@@ -8,20 +8,24 @@ import 'node_presentation.dart';
 import 'decision.dart';
 import 'decision_prompt.dart';
 import 'stats_bar.dart';
+import 'main.dart'; // Import to access SavedGame and GameService
 
 enum StoryPhase { dayIntro, dialogue, decision }
 
 class StoryScreen extends StatefulWidget {
-  const StoryScreen({super.key});
+  final SavedGame? savedGame;
+  final String? startAtNode;
+
+  const StoryScreen({super.key, this.savedGame, this.startAtNode});
 
   @override
   State<StoryScreen> createState() => _StoryScreenState();
 }
 
 class _ActiveStatEffect {
-  final String stat;    // e.g. "publicTrust"
-  final double value;   // e.g. 10.0
-  final bool positive;  // true for +, false for -
+  final String stat;
+  final double value;
+  final bool positive;
 
   _ActiveStatEffect({
     required this.stat,
@@ -29,16 +33,20 @@ class _ActiveStatEffect {
     required this.positive,
   });
 }
+
 class _StoryScreenState extends State<StoryScreen> {
   static const double portraitSize = 150;
 
-  // which node in the scenario graph we’re on
+  // Save/Load related
+  String? currentGameId;
+  String? currentGameName;
+
+  // which node in the scenario graph we're on
   String _currentNodeId = "start";
   StoryPhase _phase = StoryPhase.dayIntro;
 
   List<_ActiveStatEffect> _activeEffects = [];
   bool _effectsVisible = false;
-  // NEW: global day counter
   int _currentDay = 1;
 
   // stats for StatsBar
@@ -61,6 +69,15 @@ class _StoryScreenState extends State<StoryScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Load saved game if provided
+    if (widget.savedGame != null) {
+      _loadGameState(widget.savedGame!);
+    } else if (widget.startAtNode != null) {
+      // Start at a specific node (e.g., 'node_1' after victory speech)
+      _currentNodeId = widget.startAtNode!;
+    }
+    
     _startDayIntroTyping();
   }
 
@@ -68,6 +85,71 @@ class _StoryScreenState extends State<StoryScreen> {
   void dispose() {
     _typingTimer?.cancel();
     super.dispose();
+  }
+
+  // ───────────── SAVE/LOAD FUNCTIONS ─────────────
+
+  void _loadGameState(SavedGame game) {
+    currentGameId = game.id;
+    currentGameName = game.name;
+    _currentDay = game.currentDay;
+    _currentNodeId = game.gameState['currentNodeId'] ?? 'start';
+    
+    // Load stats
+    corruptionLevel = game.gameState['corruptionLevel']?.toDouble() ?? 0;
+    publicTrust = game.gameState['publicTrust']?.toDouble() ?? 50;
+    personalWealth = game.gameState['personalWealth']?.toDouble() ?? -50;
+    infrastructureQuality = game.gameState['infrastructureQuality']?.toDouble() ?? 50;
+    politicalCapital = game.gameState['politicalCapital']?.toDouble() ?? 50;
+  }
+
+  Future<void> _saveGame() async {
+    try {
+      // If this is a new game, generate ID and name
+      if (currentGameId == null) {
+        currentGameId = GameService.generateGameId();
+        currentGameName = await GameService.getNextGameName();
+      }
+
+      // Collect all game state
+      final gameState = {
+        'currentNodeId': _currentNodeId,
+        'corruptionLevel': corruptionLevel,
+        'publicTrust': publicTrust,
+        'personalWealth': personalWealth,
+        'infrastructureQuality': infrastructureQuality,
+        'politicalCapital': politicalCapital,
+      };
+
+      final savedGame = SavedGame(
+        id: currentGameId!,
+        name: currentGameName!,
+        savedDate: DateTime.now(),
+        gameState: gameState,
+        currentDay: _currentDay,
+      );
+
+      await GameService.saveGame(savedGame);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Game saved as $currentGameName!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to save game'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // ───────────── TYPEWRITER HELPERS ─────────────
@@ -97,7 +179,6 @@ class _StoryScreenState extends State<StoryScreen> {
   }
 
   void _startDayIntroTyping() {
-    // 🔥 use global day counter, NOT nodePresentation day
     final dayText = "Day $_currentDay in office...";
     _startTyping(dayText, speedMs: 45);
   }
@@ -110,10 +191,9 @@ class _StoryScreenState extends State<StoryScreen> {
   // ───────────── FLOW CONTROL ─────────────
 
   void _onBackgroundTap() {
-    if (_phase == StoryPhase.decision) return; // taps disabled during decision
+    if (_phase == StoryPhase.decision) return;
 
     if (!_finishedTyping) {
-      // Skip to end of current text
       _typingTimer?.cancel();
       setState(() {
         _displayedText = _fullText;
@@ -122,7 +202,6 @@ class _StoryScreenState extends State<StoryScreen> {
       return;
     }
 
-    // Finished typing → advance phase
     setState(() {
       if (_phase == StoryPhase.dayIntro) {
         _phase = StoryPhase.dialogue;
@@ -137,32 +216,29 @@ class _StoryScreenState extends State<StoryScreen> {
     final node = _currentNode;
     final ScenarioChoice choice = node.choices[option.id];
 
-    // 1) Apply effects (update stats)
     for (final effect in choice.effects) {
       _applyEffect(effect);
     }
 
-    // 2) Trigger bubbles for all those effects
     _triggerEffectBubbles(choice.effects);
 
-    // 3) Stay on decision screen while bubbles are visible
     setState(() {
-      _phase = StoryPhase.decision; // already in this phase, but explicit
+      _phase = StoryPhase.decision;
     });
 
-    // 4) After animation, move to next node & day intro
     Future.delayed(const Duration(milliseconds: 1100), () {
       if (!mounted) return;
 
       setState(() {
         if (choice.nextId == "start") {
-          // Restart scenario if you want
           _currentDay = 1;
           corruptionLevel = 0;
           publicTrust = 50;
           personalWealth = -50;
           infrastructureQuality = 50;
           politicalCapital = 50;
+          currentGameId = null;
+          currentGameName = null;
         } else {
           _currentDay += 1;
         }
@@ -172,6 +248,9 @@ class _StoryScreenState extends State<StoryScreen> {
       });
 
       _startDayIntroTyping();
+      
+      // Auto-save after each decision
+      _saveGame();
     });
   }
 
@@ -208,65 +287,59 @@ class _StoryScreenState extends State<StoryScreen> {
           break;
       }
     });
-
-    // ❌ DO NOT call bubble trigger here anymore
   }
 
-void _triggerEffectBubbles(List<ScenarioEffect> effects) {
-  // Build bubbles for all add/subtract effects
-  final newEffects = <_ActiveStatEffect>[];
+  void _triggerEffectBubbles(List<ScenarioEffect> effects) {
+    final newEffects = <_ActiveStatEffect>[];
 
-  for (final e in effects) {
-    if (e.operation == "set" || e.value == 0) continue;
+    for (final e in effects) {
+      if (e.operation == "set" || e.value == 0) continue;
 
-    final isPositive = (e.operation == "add" && e.value > 0) ||
-        (e.operation == "subtract" && e.value < 0);
+      final isPositive = (e.operation == "add" && e.value > 0) ||
+          (e.operation == "subtract" && e.value < 0);
 
-    final amount = e.value.abs();
+      final amount = e.value.abs();
 
-    newEffects.add(
-      _ActiveStatEffect(
-        stat: e.stat,
-        value: amount,
-        positive: isPositive,
-      ),
-    );
-  }
+      newEffects.add(
+        _ActiveStatEffect(
+          stat: e.stat,
+          value: amount,
+          positive: isPositive,
+        ),
+      );
+    }
 
-  if (newEffects.isEmpty) return;
+    if (newEffects.isEmpty) return;
 
-  setState(() {
-    _activeEffects = newEffects;
-    _effectsVisible = true;
-  });
-
-  // Show them, then make them float & fade
-  Future.delayed(const Duration(milliseconds: 800), () {
-    if (!mounted) return;
     setState(() {
-      _effectsVisible = false;
+      _activeEffects = newEffects;
+      _effectsVisible = true;
     });
 
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 800), () {
       if (!mounted) return;
       setState(() {
-        _activeEffects = [];
+        _effectsVisible = false;
+      });
+
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (!mounted) return;
+        setState(() {
+          _activeEffects = [];
+        });
       });
     });
-  });
-}
+  }
 
-
-  // convert ScenarioNode → your Decision model for DecisionPrompt
   Decision _decisionFromNode(ScenarioNode node) {
     final options = <DecisionOption>[];
     for (int i = 0; i < node.choices.length; i++) {
       final choice = node.choices[i];
       options.add(
         DecisionOption(
-          id: i,             // important: id = index, so we can map back
+          id: i,
           text: choice.text,
-          effect: "",        // we use ScenarioEffect instead
+          effect: "",
         ),
       );
     }
@@ -287,10 +360,25 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
     final node = _currentNode;
     final decision = _decisionFromNode(node);
 
-    // 🔥 SPECIAL CASE: DAY INTRO = FULL-BLANK SCREEN
     if (_phase == StoryPhase.dayIntro) {
       return Scaffold(
-        backgroundColor: const Color(0xFF003049), // or black if you prefer
+        backgroundColor: const Color(0xFF003049),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF003049),
+          title: Text(
+            currentGameName ?? 'New Game',
+            style: GoogleFonts.pixelifySans(
+              textStyle: const TextStyle(color: Color(0xFFFDF0D5)),
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.save, color: Color(0xFFFDF0D5)),
+              tooltip: 'Save Game',
+              onPressed: _saveGame,
+            ),
+          ],
+        ),
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: _onBackgroundTap,
@@ -311,21 +399,34 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
       );
     }
 
-    // For dialogue + decision: use your normal layout style
     return Scaffold(
       backgroundColor: const Color(0xFF003049),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF003049),
+        title: Text(
+          currentGameName ?? 'New Game',
+          style: GoogleFonts.pixelifySans(
+            textStyle: const TextStyle(color: Color(0xFFFDF0D5)),
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.save, color: Color(0xFFFDF0D5)),
+            tooltip: 'Save Game',
+            onPressed: _saveGame,
+          ),
+        ],
+      ),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _onBackgroundTap,
         child: Column(
           children: [
-            // TOP: BACKGROUND + STATS BAR
             SizedBox(
               height: screenHeight * 0.55,
               width: double.infinity,
               child: Stack(
                 children: [
-                  // Background image
                   Positioned.fill(
                     child: Image.asset(
                       _present.background,
@@ -333,7 +434,6 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
                     ),
                   ),
 
-                  // Stats bar
                   Positioned(
                     top: 0,
                     left: 0,
@@ -347,7 +447,6 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
                     ),
                   ),
 
-                  // MULTIPLE floating bubbles under the bar
                   if (_activeEffects.isNotEmpty)
                     Positioned.fill(
                       child: Stack(
@@ -358,10 +457,10 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
                               duration: const Duration(milliseconds: 4000),
                               offset: _effectsVisible
                                   ? const Offset(0, 0)
-                                  : const Offset(0, -0.5), // float up
+                                  : const Offset(0, -0.5),
                               child: AnimatedOpacity(
                                 duration: const Duration(milliseconds: 400),
-                                opacity: _effectsVisible ? 1.0 : 0.0, // fade
+                                opacity: _effectsVisible ? 1.0 : 0.0,
                                 child: _buildEffectBubble(effect),
                               ),
                             ),
@@ -390,28 +489,26 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
     return Container(
       height: screenHeight * 0.45,
       width: double.infinity,
-      color: const Color(0xFF780000), // outer frame
+      color: const Color(0xFF780000),
       child: Container(
         margin: const EdgeInsets.all(2),
         decoration: const BoxDecoration(
-          color: Color(0xFFFDF0D5), // beige base
+          color: Color(0xFFFDF0D5),
         ),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // MAIN CONTENT (matching your EventPage aesthetics)
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // NAME BAR
                 Container(
                   width: double.infinity,
                   height: 45,
                   decoration: const BoxDecoration(
-                    color: Color(0xFFC1121F), // Bright red
+                    color: Color(0xFFC1121F),
                     border: Border(
                       bottom: BorderSide(
-                        color: Color(0xFF780000), // Dark red
+                        color: Color(0xFF780000),
                         width: 2,
                       ),
                     ),
@@ -427,7 +524,7 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
                       textStyle: const TextStyle(
                         fontSize: 30,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFFFDF0D5), // Cream text
+                        color: Color(0xFFFDF0D5),
                         shadows: [
                           Shadow(
                             color: Color(0xFF780000),
@@ -442,7 +539,6 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
 
                 const SizedBox(height: 8),
 
-                // DIALOGUE TEXT (typewriter text)
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -467,7 +563,6 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
               ],
             ),
 
-            // PORTRAIT
             Positioned(
               left: 0,
               top: -portraitSize * 0.7,
@@ -501,8 +596,6 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
   }
 
   Alignment _alignmentForStat(String stat) {
-    // y = -1 is top, +1 is bottom
-    // We want these just UNDER the stats bar at the top, so around y = -0.3
     const double y = -0.3;
 
     switch (stat) {
@@ -521,36 +614,34 @@ void _triggerEffectBubbles(List<ScenarioEffect> effects) {
     }
   }
 
+  Widget _buildEffectBubble(_ActiveStatEffect effect) {
+    final sign = effect.positive ? "+" : "-";
+    final color = effect.positive
+        ? const Color(0xFF2ECC71)
+        : const Color(0xFFE74C3C);
 
-Widget _buildEffectBubble(_ActiveStatEffect effect) {
-  final sign = effect.positive ? "+" : "-";
-  final color = effect.positive
-      ? const Color(0xFF2ECC71) // green
-      : const Color(0xFFE74C3C); // red
+    final valueText = effect.value.toInt().toString();
 
-  final valueText = effect.value.toInt().toString();
-
-  return Container(
-    width: 28,
-    height: 28,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: Colors.black.withOpacity(0.7),
-      border: Border.all(
-        color: color,
-        width: 2,
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.black.withOpacity(0.7),
+        border: Border.all(
+          color: color,
+          width: 2,
+        ),
       ),
-    ),
-    alignment: Alignment.center,
-    child: Text(
-      "$sign$valueText",
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: color,
+      alignment: Alignment.center,
+      child: Text(
+        "$sign$valueText",
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 }
