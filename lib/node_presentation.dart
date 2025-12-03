@@ -48,7 +48,6 @@ class NodePresentationConfig {
     "node_1": NodePresentation(
       dayNumber: 1,
       beats: [
-        // Beat 1: Adamu congratulates
         DialogueBeat(
           speaker: "Adamu",
           background: "assets/images/office.png",
@@ -59,8 +58,6 @@ class NodePresentationConfig {
             "The people have spoken, and Borno is ready for change.",
           ],
         ),
-
-        // Beat 2: Paper on desk
         DialogueBeat(
           speaker: "Adamu",
           background: "assets/images/paper.png",
@@ -70,8 +67,6 @@ class NodePresentationConfig {
             "*He slides a folded document onto your desk.*",
           ],
         ),
-
-        // Beat 3: Back to office, Adamu continues
         DialogueBeat(
           speaker: "Adamu",
           background: "assets/images/office.png",
@@ -84,8 +79,6 @@ class NodePresentationConfig {
             "They believed in our vision.",
           ],
         ),
-
-        // Beat 4: Adamu continues
         DialogueBeat(
           speaker: "Adamu",
           background: "assets/images/office.png",
@@ -96,8 +89,6 @@ class NodePresentationConfig {
             "Approximately 50 million naira worth of recognition.",
           ],
         ),
-
-        // Beat 5: Player reacts
         DialogueBeat(
           speaker: "You",
           background: "assets/images/office.png",
@@ -107,8 +98,6 @@ class NodePresentationConfig {
             "50 million? For what exactly?",
           ],
         ),
-
-        // Beat 6: Adamu explains
         DialogueBeat(
           speaker: "Adamu",
           background: "assets/images/office.png",
@@ -126,7 +115,6 @@ class NodePresentationConfig {
     "node_2": NodePresentation(
       dayNumber: 5,
       beats: [
-        // Beat 1: Chief Okonkwo introduces the problem
         DialogueBeat(
           speaker: "Chief Okonkwo",
           background: "assets/images/office2.png",
@@ -138,8 +126,6 @@ class NodePresentationConfig {
             "The state treasury has... 80 million allocated.",
           ],
         ),
-
-        // Beat 2: Player responds
         DialogueBeat(
           speaker: "You",
           background: "assets/images/office2.png",
@@ -149,8 +135,6 @@ class NodePresentationConfig {
             "What are you suggesting?",
           ],
         ),
-
-        // Beat 3: Chief Okonkwo explains rural fund option
         DialogueBeat(
           speaker: "Chief Okonkwo",
           background: "assets/images/office2.png",
@@ -161,8 +145,6 @@ class NodePresentationConfig {
             "The villagers are patient people, they've waited decades for roads.",
           ],
         ),
-
-        // Beat 4: Player reacts
         DialogueBeat(
           speaker: "You",
           background: "assets/images/office2.png",
@@ -172,8 +154,6 @@ class NodePresentationConfig {
             "You want me to take money meant for rural development?",
           ],
         ),
-
-        // Beat 5: Chief Okonkwo presents private school option
         DialogueBeat(
           speaker: "Chief Okonkwo",
           background: "assets/images/office2.png",
@@ -449,19 +429,17 @@ class NodePresentationConfig {
       dayNumber: 100,
       beats: [
         DialogueBeat(
-          speaker: "",
+          speaker: "THE MARTYR",
           background: "assets/images/martyr.png",
-          portrait: "assets/images/default.png",
+          portrait: "assets/images/player.png",
           color: 0xFF003049,
           lines: [
-            "THE MARTYR",
-            "",
-            "The courtroom falls silent as the judge reads your sentence.",
-            "Your family weeps in the gallery. The infrastructure fund you diverted sits frozen in foreign accounts whilst schools remain closed.",
-            "But you stood firm when it mattered. You refused to let corruption continue, even knowing it would destroy you.",
-            "Your testimony triggers real investigations. International pressure mounts. Reform movements begin.",
-            "In prison, you receive letters. From students. From activists. From people who believe change is possible because you proved it.",
-            "Your career is over. Your freedom is gone. But your legacy? That belongs to the future.",
+            "The courtroom is silent as the judge reads your sentence.",
+            "Twenty years. Your family weeps in the gallery.",
+            "You exposed the system, and the system crushed you. They found technicalities, old laws, anything to silence you.",
+            "In prison, you receive letters. Activists call you a hero. Students study your testimony. Your sacrifice lit a fire.",
+            "But your children will grow up without you. Your mother died while you awaited trial.",
+            "You told the truth. And the truth destroyed your life.",
           ],
         ),
       ],
@@ -471,21 +449,20 @@ class NodePresentationConfig {
       dayNumber: 100,
       beats: [
         DialogueBeat(
-          speaker: "",
+          speaker: "THE BROKEN IDEALIST",
           background: "assets/images/idealist.png",
-          portrait: "assets/images/default.png",
+          portrait: "assets/images/player.png",
           color: 0xFF780000,
           lines: [
-            "THE BROKEN IDEALIST",
-            "",
-            "You lost the re-election by a landslide. 73% voted against you.",
-            "You tried. God knows you tried. You refused the bribes, rejected the kickbacks, stood firm against the pressure.",
-            "And you achieved nothing. The schools stayed closed. The roads stayed broken. The people still suffer.",
-            "The new governor? He took office with a smile and promises. Within a month, the kickbacks started flowing again.",
-            "Your successor will steal more in his first year than you refused in your entire term.",
-            "You return to private life with your integrity intact. Your hands are clean.",
-            "But the children still can't read. The roads still kill. And nobody remembers your name.",
-            "Good intentions aren't enough. They never were.",
+            "You lost the re-election by a landslide. Seventy-three percent voted against you.",
+            "You refused every bribe. Rejected every shortcut. Stayed true to your principles.",
+            "And you accomplished nothing.",
+            "The new governor is already making deals. The system continues as it always has.",
+            "Your integrity is intact. Your conscience is clear.",
+            "But the schools are still broken. The roads still kill. The corruption still spreads.",
+            "You return to private life with your dignity. And nothing else.",
+            "The children still can't read. And you can sleep at night.",
+            "You wonder which matters more.",
           ],
         ),
       ],
@@ -495,20 +472,18 @@ class NodePresentationConfig {
       dayNumber: 100,
       beats: [
         DialogueBeat(
-          speaker: "",
+          speaker: "THE COMFORTABLE CORRUPTOR",
           background: "assets/images/corruptor.png",
-          portrait: "assets/images/default.png",
+          portrait: "assets/images/player.png",
           color: 0xFFC1121F,
           lines: [
-            "THE COMFORTABLE CORRUPTOR",
-            "",
-            "You sit in your mansion in Abuja, surrounded by luxury your salary could never afford.",
-            "Your children attend the finest schools in London. Your accounts overflow with money meant for hospitals, schools, roads.",
-            "Outside your gates, the Maiduguri-Bama highway crumbles. Fifteen people died on that bridge. Fifteen families destroyed.",
-            "The schools you promised remain closed. Children learn under trees because the education fund sits in your offshore account.",
-            "Sometimes, late at night, you see their faces. The people who believed in you. The people you betrayed.",
-            "But morning comes. The guilt fades. You pour another drink and count your money.",
-            "You won. Didn't you?",
+            "Your mansion in Abuja has twelve bedrooms. Your children attend private schools in London.",
+            "The offshore accounts are untraceable. The paper trail is immaculate.",
+            "You were never caught. You played the game better than most.",
+            "Sometimes, late at night, you think about the bridge that collapsed. Fifteen people died. Your contractor had cut corners - with your approval.",
+            "The schools you closed still haven't reopened. The education fund you embezzled could have changed thousands of lives.",
+            "But morning always comes. And with it, another day of luxury.",
+            "You won. And everyone else lost.",
           ],
         ),
       ],
@@ -518,21 +493,19 @@ class NodePresentationConfig {
       dayNumber: 100,
       beats: [
         DialogueBeat(
-          speaker: "",
+          speaker: "THE WHISTLEBLOWER",
           background: "assets/images/whistleblower.png",
-          portrait: "assets/images/default.png",
+          portrait: "assets/images/player.png",
           color: 0xFF003049,
           lines: [
-            "THE WHISTLEBLOWER",
-            "",
-            "The press conference changes everything. You confess it all.",
-            "The kickbacks. The diverted funds. The pressure. The compromises. You name names. You provide evidence.",
-            "Within hours, you're finished. Your political career is over. Your family receives death threats.",
-            "Your mother won't speak to you. Your wife takes the children to her family. You may never be safe in Nigeria again.",
-            "But the investigation begins. Real investigation. The EFCC moves. International pressure mounts.",
-            "Three governors resign within a month. Two are arrested. The system is shaking.",
-            "You lost everything. Your career. Your family. Your safety. Perhaps your future.",
-            "But you told the truth. In a system built on lies, that might be the only victory that matters.",
+            "The press conference is packed. Your hands shake as you present the evidence.",
+            "Names. Dates. Bank accounts. Everything.",
+            "You confess your own crimes. And you expose everyone else's.",
+            "Your career is over. Your family receives threats. Your mother won't speak to you.",
+            "But within a month, the EFCC launches investigations. Three governors resign. Two are arrested.",
+            "The system fights back. But for the first time in decades, it's actually wounded.",
+            "You lost everything. But you told the truth.",
+            "History will remember your name - though you'll never know if that was worth it.",
           ],
         ),
       ],
@@ -542,21 +515,20 @@ class NodePresentationConfig {
       dayNumber: 100,
       beats: [
         DialogueBeat(
-          speaker: "",
+          speaker: "THE REFORMER",
           background: "assets/images/reformer.png",
-          portrait: "assets/images/default.png",
+          portrait: "assets/images/player.png",
           color: 0xFF003049,
           lines: [
-            "THE REFORMER",
-            "",
-            "The new school in Maiduguri opens its doors. Real teachers. Proper books. Equipment that works.",
-            "The highway is completed. Quality construction. It will last decades, not years.",
-            "You walk through the market and children run to you. Not for money. Not for favours. To say thank you.",
-            "It wasn't easy. You made powerful enemies. People wanted you to fail, to prove that honest governance is impossible.",
-            "You faced threats. Pressure. Isolation. There were nights you nearly broke.",
-            "But you didn't. You held the line. You proved them wrong.",
-            "The system is still corrupt. One governor cannot fix everything. But you changed something real.",
-            "And that's how real reform begins. One honest person. One kept promise. One step at a time.",
+            "The new school in Maiduguri opens on schedule. The children smile as they enter clean classrooms.",
+            "The highway you commissioned is the first in decades completed with actual quality materials.",
+            "You made powerful enemies. Survived three 'accidents.' Watched your family threatened.",
+            "There were moments you nearly broke. Moments the pressure almost crushed you.",
+            "But you held the line.",
+            "The system is still corrupt. The other governors still steal. The rot runs deep.",
+            "But you proved something: change is possible. Difficult, costly, dangerous - but possible.",
+            "When you leave office, a little girl thanks you for her school. She means it.",
+            "This is what winning looks like. Small. Hard. Real.",
           ],
         ),
       ],
@@ -571,7 +543,7 @@ class NodePresentationConfig {
             DialogueBeat(
               speaker: "Advisor",
               background: "assets/images/office.png",
-              portrait: "assets/images/portraits/default.png",
+              portrait: "assets/images/default.png",
               color: 0xFF003049,
               lines: [
                 "No custom dialogue defined for this situation yet.",
