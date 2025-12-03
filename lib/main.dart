@@ -6,15 +6,22 @@ import 'character.dart';
 import 'event.dart';
 import 'event_page.dart';
 import 'pixel_adventure.dart';
+import 'package:flutter/services.dart';
 
 void main() {
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: SplashPage(
-      duration: 2,
-      goToPage: const HomeScreen(),
-    ),
-  ));
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]).then((_) {
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: SplashPage(
+        duration: 2,
+        goToPage: const HomeScreen(),
+      ),
+    ));
+  });
 }
 
 // ----------------------

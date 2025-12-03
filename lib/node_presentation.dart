@@ -32,13 +32,13 @@ class NodePresentationConfig {
       dayNumber: 0,
       beats: [
         DialogueBeat(
-          speaker: "Narrator",
-          background: "assets/images/victory.png",
-          portrait: "assets/images/default.png",
-          color: 0xFF003049,
+          speaker: "You",
+          background: "assets/images/parade.png",
+          portrait: "assets/images/player.png",
+          color: 0xFF780000,
           lines: [
-            "You have just won the election for Governor of Borno State.",
-            "Free schooling, lower taxes, better infrastructure - these were your promises.",
+            "I can't believe I've won the election for Governor of Borno State.",
+            "Free schooling, lower taxes, better infrastructure.. I made promises.",
             "Now the real work begins.",
           ],
         ),

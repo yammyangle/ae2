@@ -8,6 +8,7 @@ import 'custom_hitbox.dart';
 import 'utils.dart';
 import 'fruit.dart';
 import 'saw.dart';
+import 'checkpoint.dart';
 
 enum PlayerState {
   idle,
@@ -130,18 +131,143 @@ class Player extends SpriteAnimationGroupComponent
         _keysPressed.contains(LogicalKeyboardKey.keyW);
   }
 
-  @override
-  void onCollisionStart(
-      Set<Vector2> intersectionPoints, PositionComponent other) {
-    if (!reachedCheckpoint) {
-      if (other is Fruit) {
-        other.collidedWithPlayer();
-      }
-      if (other is Saw) {
-        _respawn();
-      }
+//
+// And here's the _reachedCheckpoint method with full debugging:
+// In player.dart, update the _reachedCheckpoint method:
+
+// In your player.dart, update the _reachedCheckpoint method:
+
+void _reachedCheckpoint() async {
+  print('🎯 PLAYER: _reachedCheckpoint() START');
+  
+  if (reachedCheckpoint) {
+    print('⚠️ PLAYER: Already reached checkpoint, returning early');
+    return;
+  }
+  
+  
+  // Adjust position for animation
+  if (scale.x > 0) {
+    position = position - Vector2.all(32);
+  } else if (scale.x < 0) {
+    position = position + Vector2(32, -32);
+  }
+  print('📍 PLAYER: Position adjusted');
+
+  current = PlayerState.disappearing;
+  print('🎬 PLAYER: Set animation to disappearing');
+
+  // Short delay then move off screen
+  await Future.delayed(const Duration(milliseconds: 300));
+  
+  // Move player off-screen to prevent further collisions
+  position = Vector2.all(-10000);
+  velocity = Vector2.zero();
+  print('🚀 PLAYER: Moved off screen to prevent collisions');
+
+  // Call the game's checkpoint handler
+  print('📞 PLAYER: Calling game.onCheckpointReached()...');
+  game.onCheckpointReached();
+  print('✅ PLAYER: game.onCheckpointReached() called successfully');
+  print('🎯 PLAYER: _reachedCheckpoint() END');
+}
+
+// Also update the onCollisionStart to be extra safe:
+@override
+void onCollisionStart(
+    Set<Vector2> intersectionPoints, PositionComponent other) {
+  print('💥 COLLISION: Player collided with ${other.runtimeType}');
+  
+  // If checkpoint reached, ignore ALL collisions
+  if (reachedCheckpoint) {
+    print('⚠️ COLLISION: Checkpoint reached, ignoring all collisions');
+    return;
+  }
+  
+  if (other is Fruit) {
+    print('🍊 COLLISION: Hit fruit');
+    other.collidedWithPlayer();
+  }
+  if (other is Saw) {
+    print('🪚 COLLISION: Hit saw - respawning');
+    _respawn();
+  }
+  // ⭐ REMOVED: Don't call _reachedCheckpoint here
+  // The checkpoint will handle it and call player.triggerCheckpointSequence()
+  if (other is Checkpoint) {
+    print('🚩 COLLISION: Hit checkpoint - letting checkpoint handle logic');
+    // Don't do anything here - let checkpoint decide
+  }
+  
+  super.onCollisionStart(intersectionPoints, other);
+}
+
+void triggerCheckpointSequence() async {
+  print('🎯 PLAYER: triggerCheckpointSequence() START (called by checkpoint)');
+  
+  if (reachedCheckpoint) {
+    print('⚠️ PLAYER: Already reached checkpoint, returning early');
+    return;
+  }
+  
+  reachedCheckpoint = true;
+  print('✅ PLAYER: Set reachedCheckpoint = true');
+  
+  // Adjust position for animation
+  if (scale.x > 0) {
+    position = position - Vector2.all(32);
+  } else if (scale.x < 0) {
+    position = position + Vector2(32, -32);
+  }
+  print('📍 PLAYER: Position adjusted');
+
+  current = PlayerState.disappearing;
+  print('🎬 PLAYER: Set animation to disappearing');
+
+  // Short delay then move off screen
+  await Future.delayed(const Duration(milliseconds: 300));
+  
+  // Move player off-screen to prevent further collisions
+  position = Vector2.all(-10000);
+  velocity = Vector2.zero();
+  print('🚀 PLAYER: Moved off screen to prevent collisions');
+
+  // Call the game's checkpoint handler
+  print('📞 PLAYER: Calling game.onCheckpointReached()...');
+  game.onCheckpointReached();
+  print('✅ PLAYER: game.onCheckpointReached() called successfully');
+  print('🎯 PLAYER: triggerCheckpointSequence() END');
+}
+
+// Also update _respawn to prevent respawning if checkpoint reached:
+  void _respawn() async {
+    if (reachedCheckpoint) {
+      print('⚠️ RESPAWN: Checkpoint reached, ignoring respawn');
+      return;
     }
-    super.onCollisionStart(intersectionPoints, other);
+    
+    const canMoveDuration = Duration(milliseconds: 400);
+    gotHit = true;
+    current = PlayerState.hit;
+
+    await animationTicker?.completed;
+    animationTicker?.reset();
+
+    scale.x = 1;
+    position = startingPosition - Vector2.all(32);
+    current = PlayerState.appearing;
+
+    await animationTicker?.completed;
+    animationTicker?.reset();
+
+    velocity = Vector2.zero();
+    position = startingPosition;
+    _updatePlayerState();
+    Future.delayed(canMoveDuration, () => gotHit = false);
+  }
+
+  void collidedwithEnemy() {
+    _respawn();
   }
 
   void _loadAllAnimations() {
@@ -262,28 +388,5 @@ class Player extends SpriteAnimationGroupComponent
     }
   }
 
-  void _respawn() async {
-    const canMoveDuration = Duration(milliseconds: 400);
-    gotHit = true;
-    current = PlayerState.hit;
-
-    await animationTicker?.completed;
-    animationTicker?.reset();
-
-    scale.x = 1;
-    position = startingPosition - Vector2.all(32);
-    current = PlayerState.appearing;
-
-    await animationTicker?.completed;
-    animationTicker?.reset();
-
-    velocity = Vector2.zero();
-    position = startingPosition;
-    _updatePlayerState();
-    Future.delayed(canMoveDuration, () => gotHit = false);
-  }
-
-  void collidedwithEnemy() {
-    _respawn();
-  }
+  // In your player.dart, update the _reachedCheckpoint metho
 }

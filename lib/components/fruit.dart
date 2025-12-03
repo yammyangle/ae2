@@ -50,6 +50,10 @@ class Fruit extends SpriteAnimationComponent
   void collidedWithPlayer() async {
     if (!collected) {
       collected = true;
+
+      // ⬅⬅⬅ ADD THIS LINE
+      gameRef.collectedFruits++;
+
       animation = SpriteAnimation.fromFrameData(
         game.images.fromCache('Items/Fruits/Collected.png'),
         SpriteAnimationData.sequenced(
@@ -64,4 +68,5 @@ class Fruit extends SpriteAnimationComponent
       removeFromParent();
     }
   }
+
 }

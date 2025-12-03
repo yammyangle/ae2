@@ -7,6 +7,7 @@ import 'fruit.dart';
 import 'player.dart';
 import 'saw.dart';
 import '../pixel_adventure.dart';
+import 'checkpoint.dart';
 
 class Level extends World with HasGameRef<PixelAdventure> {
   final String levelName;
@@ -72,6 +73,13 @@ FutureOr<void> onLoad() async {
               size: Vector2(spawnPoint.width, spawnPoint.height),
             );
             add(saw);
+            break;
+          case 'Checkpoint':
+            final checkpoint = Checkpoint(
+              position: Vector2(spawnPoint.x, spawnPoint.y),
+              size: Vector2(spawnPoint.width, spawnPoint.height),
+            );
+            add(checkpoint);
             break;
           default:
         }

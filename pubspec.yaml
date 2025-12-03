@@ -31,5 +31,6 @@ flutter:
     - assets/images/Main Characters/Mask Dude/
     - assets/images/Items/Fruits/
     - assets/images/Traps/Saw/
+    - assets/images/Items/Checkpoints/Checkpoint/
 
 shared_preferences: ^2.5.3

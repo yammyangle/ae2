@@ -9,6 +9,12 @@ import 'components/level.dart';
 import 'components/player.dart';
 
 class PixelAdventure extends FlameGame with HasCollisionDetection {
+  final VoidCallback? onLevelComplete;
+  
+  PixelAdventure({this.onLevelComplete}) {
+    print('🎮 GAME: PixelAdventure created with callback: ${onLevelComplete != null ? "YES" : "NO"}');
+  }
+  
   @override
   Color backgroundColor() => const Color(0xFF211F30);
   
@@ -17,6 +23,10 @@ class PixelAdventure extends FlameGame with HasCollisionDetection {
   
   bool playSounds = false;
   double soundVolume = 1.0;
+  
+  // ⭐ ADD FRUIT TRACKING
+  int totalFruits = 0;
+  int collectedFruits = 0;
 
   @override
   FutureOr<void> onLoad() async {
@@ -61,6 +71,46 @@ class PixelAdventure extends FlameGame with HasCollisionDetection {
     return super.onLoad();
   }
   
+  // ⭐ ADD METHOD TO REGISTER FRUIT
+  void registerFruit() {
+    totalFruits++;
+    print('🍊 GAME: Fruit registered. Total fruits: $totalFruits');
+  }
+  
+  // ⭐ ADD METHOD TO COLLECT FRUIT
+  void collectFruit() {
+    collectedFruits++;
+    print('🍊 GAME: Fruit collected! $collectedFruits / $totalFruits');
+  }
+  
+  // ⭐ ADD METHOD TO CHECK IF ALL FRUITS COLLECTED
+  bool areAllFruitsCollected() {
+    final allCollected = collectedFruits >= totalFruits;
+    print('🍊 GAME: All fruits collected? $allCollected ($collectedFruits / $totalFruits)');
+    return allCollected;
+  }
+  
+  void onCheckpointReached() {
+    print('🎯 GAME: onCheckpointReached called!');
+    print('🎯 GAME: onLevelComplete callback is: ${onLevelComplete != null ? "PRESENT" : "NULL"}');
+    
+    if (onLevelComplete == null) {
+      print('❌ GAME: ERROR - onLevelComplete is NULL! Cannot return to story!');
+      return;
+    }
+    
+    Future.delayed(const Duration(milliseconds: 500), () {
+      print('⏰ GAME: Delay completed, calling onLevelComplete callback...');
+      try {
+        onLevelComplete!();
+        print('✅ GAME: onLevelComplete callback executed successfully!');
+      } catch (e, stackTrace) {
+        print('❌ GAME: ERROR calling onLevelComplete: $e');
+        print('Stack trace: $stackTrace');
+      }
+    });
+  }
+  
   void loadNextLevel() {
     removeWhere((component) => component is Level);
     Player player = Player(character: 'Mask Dude');
@@ -71,7 +121,12 @@ class PixelAdventure extends FlameGame with HasCollisionDetection {
 }
 
 class PixelAdventureScreen extends StatefulWidget {
-  const PixelAdventureScreen({super.key});
+  final VoidCallback? onLevelComplete;
+  
+  const PixelAdventureScreen({
+    super.key,
+    this.onLevelComplete,
+  });
 
   @override
   State<PixelAdventureScreen> createState() => _PixelAdventureScreenState();
@@ -84,7 +139,11 @@ class _PixelAdventureScreenState extends State<PixelAdventureScreen> {
   void initState() {
     super.initState();
     print('=== Initializing PixelAdventureScreen ===');
-    game = PixelAdventure();
+    print('📞 SCREEN: widget.onLevelComplete is: ${widget.onLevelComplete != null ? "PRESENT" : "NULL"}');
+    
+    game = PixelAdventure(
+      onLevelComplete: widget.onLevelComplete,
+    );
 
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
@@ -98,7 +157,9 @@ class _PixelAdventureScreenState extends State<PixelAdventureScreen> {
     if (kDebugMode) {
       print('=== Hot reload detected, recreating game ===');
       setState(() {
-        game = PixelAdventure();
+        game = PixelAdventure(
+          onLevelComplete: widget.onLevelComplete,
+        );
       });
     }
   }
