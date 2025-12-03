@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'story_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'character.dart';
 import 'event.dart';
 import 'event_page.dart';
@@ -136,11 +137,23 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<SavedGame> savedGames = [];
   bool isLoading = true;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
     _loadSavedGames();
+    _playMenuMusic();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  void _playMenuMusic() {
+    _audioPlayer.play(AssetSource('audio/cheering.wav'));
   }
 
   Future<void> _loadSavedGames() async {
@@ -242,85 +255,93 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('The State of Secret')),
       body: Container(
-        color: Colors.black,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const StoryScreen()),
-                  );
-                },
-                style: TextButton.styleFrom(
-                    backgroundColor:
-                        const Color.fromARGB(255, 0, 48, 73),
-                    padding: const EdgeInsets.all(20)),
-                child: const Text('Begin New Game',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          EventPage(event: getFelderEvent()),
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/victory.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Container(
+          color: Colors.black.withOpacity(0.5),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const StoryScreen()),
+                    );
+                  },
+                  style: TextButton.styleFrom(
+                      backgroundColor:
+                          const Color.fromARGB(255, 0, 48, 73),
+                      padding: const EdgeInsets.all(20)),
+                  child: const Text('Begin New Game',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            EventPage(event: getFelderEvent()),
+                      ),
+                    );
+                  },
+                  child: const Text('View Felder Event'),
+                ),
+                const SizedBox(height: 20),
+                InkWell(
+                  onTap: _showSavedGamesDialog,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 15),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      border: Border.all(
+                          color: const Color.fromARGB(255, 0, 48, 73),
+                          width: 4),
                     ),
-                  );
-                },
-                child: const Text('View Felder Event'),
-              ),
-              const SizedBox(height: 20),
-              InkWell(
-                onTap: _showSavedGamesDialog,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 40, vertical: 15),
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    border: Border.all(
-                        color: const Color.fromARGB(255, 0, 48, 73),
-                        width: 4),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.save,
-                          color: Color.fromARGB(255, 0, 48, 73)),
-                      const SizedBox(width: 10),
-                      const Text('Saved Games',
-                          style: TextStyle(
-                              color: Color.fromARGB(255, 0, 48, 73),
-                              fontWeight: FontWeight.bold)),
-                      if (savedGames.isNotEmpty) ...[
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.save,
+                            color: Colors.white),
                         const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 0, 48, 73),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            savedGames.length.toString(),
-                            style: const TextStyle(
+                        const Text('Saved Games',
+                            style: TextStyle(
                                 color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12),
+                                fontWeight: FontWeight.bold)),
+                        if (savedGames.isNotEmpty) ...[
+                          const SizedBox(width: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(255, 0, 48, 73),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              savedGames.length.toString(),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12),
+                            ),
                           ),
-                        ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -350,5 +371,4 @@ Event getFelderEvent() {
       "they leave behind! Haha!",
     ],
   );
-
 }

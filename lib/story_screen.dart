@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 import 'scenario_graph.dart';
 import 'node_presentation.dart';
@@ -95,6 +96,8 @@ class _StoryScreenState extends State<StoryScreen> {
   // History for back button
   final List<_HistoryState> _history = [];
   bool get _isEnding => _currentNodeId.startsWith('ending_');
+  
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   ScenarioNode get _currentNode => ScenarioGraph.getNode(_currentNodeId);
   NodePresentation get _present => NodePresentationConfig.forId(_currentNodeId);
@@ -112,6 +115,7 @@ class _StoryScreenState extends State<StoryScreen> {
   @override
   void dispose() {
     _typingTimer?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -185,6 +189,9 @@ class _StoryScreenState extends State<StoryScreen> {
   void _startDayIntroTyping() {
     final dayText = "Day ${_present.dayNumber} in office...";
     _startTyping(dayText, speedMs: 45);
+    
+    // Play day transition sound
+    _audioPlayer.play(AssetSource('audio/transition.wav'));
   }
 
   void _startCurrentLineTyping() {
@@ -564,230 +571,244 @@ class _StoryScreenState extends State<StoryScreen> {
     );
   }
 
-
   Widget _buildDialogueBox(double screenHeight) {
-  final beat = _currentBeat;
-  
-  // Check if this is an ending - use special styling
-  if (_isEnding) {
-    return _buildEndingBox(screenHeight, beat);
-  }
-  
-  // Regular dialogue box
-  final boxColor = Color(beat.color);
-  
-  return Container(
-    height: screenHeight * 0.45,
-    width: double.infinity,
-    color: const Color(0xFF780000),
-    child: Container(
-      margin: const EdgeInsets.all(2),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFDF0D5),
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (beat.speaker.isNotEmpty)
-                Container(
-                  width: double.infinity,
-                  height: 45,
-                  decoration: BoxDecoration(
-                    color: boxColor,
-                    border: const Border(
-                      bottom: BorderSide(
-                        color: Color(0xFF780000),
-                        width: 2,
+    final beat = _currentBeat;
+    
+    // Check if this is an ending - use special styling
+    if (_isEnding) {
+      return _buildEndingBox(screenHeight, beat);
+    }
+    
+    // Regular dialogue box
+    final boxColor = Color(beat.color);
+    
+    return Container(
+      height: screenHeight * 0.45,
+      width: double.infinity,
+      color: const Color(0xFF780000),
+      child: Container(
+        margin: const EdgeInsets.all(2),
+        decoration: const BoxDecoration(
+          color: Color(0xFFFDF0D5),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (beat.speaker.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    height: 45,
+                    decoration: BoxDecoration(
+                      color: boxColor,
+                      border: const Border(
+                        bottom: BorderSide(
+                          color: Color(0xFF780000),
+                          width: 2,
+                        ),
                       ),
                     ),
-                  ),
-                  padding: const EdgeInsets.only(
-                    left: portraitSize + 7,
-                    bottom: 2,
-                  ),
-                  alignment: Alignment.bottomLeft,
-                  child: Text(
-                    beat.speaker,
-                    style: GoogleFonts.pixelifySans(
-                      textStyle: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFFDF0D5),
-                        shadows: [
-                          Shadow(
-                            color: Color(0xFF780000),
-                            offset: Offset(2, 2),
-                            blurRadius: 1,
-                          ),
-                        ],
-                      ),
+                    padding: const EdgeInsets.only(
+                      left: portraitSize + 7,
+                      bottom: 2,
                     ),
-                  ),
-                ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 2,
-                  ),
-                  child: SingleChildScrollView(
+                    alignment: Alignment.bottomLeft,
                     child: Text(
-                      _displayedText,
+                      beat.speaker,
                       style: GoogleFonts.pixelifySans(
                         textStyle: const TextStyle(
-                          fontSize: 25,
-                          height: 1.2,
-                          color: Color(0xFF003049),
-                          fontWeight: FontWeight.w500,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFFDF0D5),
+                          shadows: [
+                            Shadow(
+                              color: Color(0xFF780000),
+                              offset: Offset(2, 2),
+                              blurRadius: 1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 2,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Text(
+                        _displayedText,
+                        style: GoogleFonts.pixelifySans(
+                          textStyle: const TextStyle(
+                            fontSize: 25,
+                            height: 1.2,
+                            color: Color(0xFF003049),
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          Positioned(
-            left: 0,
-            top: -portraitSize * 0.7,
-            child: Container(
-              width: portraitSize,
-              height: portraitSize,
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: boxColor,
-                  width: 4,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF780000).withOpacity(0.5),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                    offset: const Offset(3, 3),
+              ],
+            ),
+            Positioned(
+              left: 0,
+              top: -portraitSize * 0.7,
+              child: Container(
+                width: portraitSize,
+                height: portraitSize,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: boxColor,
+                    width: 4,
                   ),
-                ],
-                image: DecorationImage(
-                  image: AssetImage(beat.portrait),
-                  fit: BoxFit.cover,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF780000).withOpacity(0.5),
+                      blurRadius: 8,
+                      spreadRadius: 2,
+                      offset: const Offset(3, 3),
+                    ),
+                  ],
+                  image: DecorationImage(
+                    image: AssetImage(beat.portrait),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEndingBox(double screenHeight, DialogueBeat beat) {
+    // Play ending audio
+    _playEndingAudio();
+    
+    // Determine if this is a "good" or "bad" ending for color scheme
+    final isGoodEnding = _currentNodeId == 'ending_reformer' || 
+                         _currentNodeId == 'ending_whistleblower' || 
+                         _currentNodeId == 'ending_martyr';
+    
+    final titleColor = isGoodEnding 
+        ? const Color(0xFFFFD700)  // Gold for good endings
+        : const Color(0xFFDC143C);  // Crimson for bad endings
+    
+    final textColor = isGoodEnding
+        ? const Color(0xFFFDF0D5)  // Light cream for good endings
+        : const Color(0xFFFFB6B6);  // Light red for bad endings
+    
+    return Container(
+      height: screenHeight * 0.45,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.85),
+        border: Border.all(
+          color: titleColor,
+          width: 3,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: titleColor.withOpacity(0.5),
+            blurRadius: 20,
+            spreadRadius: 5,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Dramatic title banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isGoodEnding
+                    ? [const Color(0xFF1A1A1A), const Color(0xFF2D2D2D)]
+                    : [const Color(0xFF1A0000), const Color(0xFF2D0000)],
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: titleColor,
+                  width: 2,
+                ),
+              ),
+            ),
+            child: Text(
+              beat.speaker,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.pixelifySans(
+                textStyle: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: titleColor,
+                  letterSpacing: 2,
+                  shadows: [
+                    Shadow(
+                      color: titleColor.withOpacity(0.8),
+                      blurRadius: 10,
+                    ),
+                    const Shadow(
+                      color: Colors.black,
+                      offset: Offset(3, 3),
+                      blurRadius: 5,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Ending text
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: SingleChildScrollView(
+                child: Text(
+                  _displayedText,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.pixelifySans(
+                    textStyle: TextStyle(
+                      fontSize: 20,
+                      height: 1.4,
+                      color: textColor,
+                      fontWeight: FontWeight.w600,
+                      shadows: [
+                        const Shadow(
+                          color: Colors.black,
+                          offset: Offset(1, 1),
+                          blurRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         ],
       ),
-    ),
-  );
-}
+    );
+  }
 
-Widget _buildEndingBox(double screenHeight, DialogueBeat beat) {
-  // Determine if this is a "good" or "bad" ending for color scheme
-  final isGoodEnding = _currentNodeId == 'ending_reformer' || 
-                       _currentNodeId == 'ending_whistleblower' || 
-                       _currentNodeId == 'ending_martyr';
-  
-  final titleColor = isGoodEnding 
-      ? const Color(0xFFFFD700)  // Gold for good endings
-      : const Color(0xFFDC143C);  // Crimson for bad endings
-  
-  final textColor = isGoodEnding
-      ? const Color(0xFFFDF0D5)  // Light cream for good endings
-      : const Color(0xFFFFB6B6);  // Light red for bad endings
-  
-  return Container(
-    height: screenHeight * 0.45,
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: Colors.black.withOpacity(0.85),
-      border: Border.all(
-        color: titleColor,
-        width: 3,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: titleColor.withOpacity(0.5),
-          blurRadius: 20,
-          spreadRadius: 5,
-        ),
-      ],
-    ),
-    child: Column(
-      children: [
-        // Dramatic title banner
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isGoodEnding
-                  ? [const Color(0xFF1A1A1A), const Color(0xFF2D2D2D)]
-                  : [const Color(0xFF1A0000), const Color(0xFF2D0000)],
-            ),
-            border: Border(
-              bottom: BorderSide(
-                color: titleColor,
-                width: 2,
-              ),
-            ),
-          ),
-          child: Text(
-            beat.speaker,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.pixelifySans(
-              textStyle: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                color: titleColor,
-                letterSpacing: 2,
-                shadows: [
-                  Shadow(
-                    color: titleColor.withOpacity(0.8),
-                    blurRadius: 10,
-                  ),
-                  const Shadow(
-                    color: Colors.black,
-                    offset: Offset(3, 3),
-                    blurRadius: 5,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Ending text
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: SingleChildScrollView(
-              child: Text(
-                _displayedText,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.pixelifySans(
-                  textStyle: TextStyle(
-                    fontSize: 20,
-                    height: 1.4,
-                    color: textColor,
-                    fontWeight: FontWeight.w600,
-                    shadows: [
-                      const Shadow(
-                        color: Colors.black,
-                        offset: Offset(1, 1),
-                        blurRadius: 2,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
+  void _playEndingAudio() {
+    final isGoodEnding = _currentNodeId == 'ending_reformer' || 
+                         _currentNodeId == 'ending_whistleblower' || 
+                         _currentNodeId == 'ending_martyr';
+    
+    final audioFile = isGoodEnding 
+        ? 'audio/goodending1.wav' 
+        : 'audio/badending.wav';
+    
+    _audioPlayer.play(AssetSource(audioFile));
+  }
 
   Widget _buildEffectBubble(_ActiveStatEffect effect) {
     final sign = effect.positive ? "+" : "-";
