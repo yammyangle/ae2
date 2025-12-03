@@ -449,7 +449,7 @@ class NodePresentationConfig {
       dayNumber: 100,
       beats: [
         DialogueBeat(
-          speaker: "THE BROKEN IDEALIST",
+          speaker: "THE IDEALIST",
           background: "assets/images/idealist.png",
           portrait: "assets/images/player.png",
           color: 0xFF780000,
@@ -472,7 +472,7 @@ class NodePresentationConfig {
       dayNumber: 100,
       beats: [
         DialogueBeat(
-          speaker: "THE COMFORTABLE CORRUPTOR",
+          speaker: "THE CORRUPTOR",
           background: "assets/images/corruptor.png",
           portrait: "assets/images/player.png",
           color: 0xFFC1121F,
