@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'story_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'character.dart';
 import 'event.dart';
 import 'event_page.dart';
@@ -150,11 +151,23 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<SavedGame> savedGames = [];
   bool isLoading = true;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
     _loadSavedGames();
+    _playMenuMusic();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  void _playMenuMusic() {
+    _audioPlayer.play(AssetSource('audio/cheering.wav'));
   }
 
   Future<void> _loadSavedGames() async {

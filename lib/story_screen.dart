@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:ae2/pixel_adventure.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 import 'scenario_graph.dart';
 import 'node_presentation.dart';
@@ -122,6 +123,9 @@ class _StoryScreenState extends State<StoryScreen> {
 
   // History for back button
   final List<_HistoryState> _history = [];
+  bool get _isEnding => _currentNodeId.startsWith('ending_');
+  
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   ScenarioNode get _currentNode => ScenarioGraph.getNode(_currentNodeId);
   NodePresentation get _present => NodePresentationConfig.forId(_currentNodeId);
@@ -159,6 +163,7 @@ class _StoryScreenState extends State<StoryScreen> {
   @override
   void dispose() {
     _typingTimer?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -297,6 +302,9 @@ class _StoryScreenState extends State<StoryScreen> {
   void _startDayIntroTyping() {
     final dayText = "Day ${_present.dayNumber} in office...";
     _startTyping(dayText, speedMs: 45);
+    
+    // Play day transition sound
+    _audioPlayer.play(AssetSource('audio/transition.wav'));
   }
 
   void _startCurrentLineTyping() {
@@ -683,6 +691,13 @@ class _StoryScreenState extends State<StoryScreen> {
 
   Widget _buildDialogueBox(double screenHeight) {
     final beat = _currentBeat;
+    
+    // Check if this is an ending - use special styling
+    if (_isEnding) {
+      return _buildEndingBox(screenHeight, beat);
+    }
+    
+    // Regular dialogue box
     final boxColor = Color(beat.color);
     
     return Container(
@@ -790,6 +805,127 @@ class _StoryScreenState extends State<StoryScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildEndingBox(double screenHeight, DialogueBeat beat) {
+    // Play ending audio
+    _playEndingAudio();
+    
+    // Determine if this is a "good" or "bad" ending for color scheme
+    final isGoodEnding = _currentNodeId == 'ending_reformer' || 
+                         _currentNodeId == 'ending_whistleblower' || 
+                         _currentNodeId == 'ending_martyr';
+    
+    final titleColor = isGoodEnding 
+        ? const Color(0xFFFFD700)  // Gold for good endings
+        : const Color(0xFFDC143C);  // Crimson for bad endings
+    
+    final textColor = isGoodEnding
+        ? const Color(0xFFFDF0D5)  // Light cream for good endings
+        : const Color(0xFFFFB6B6);  // Light red for bad endings
+    
+    return Container(
+      height: screenHeight * 0.45,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.85),
+        border: Border.all(
+          color: titleColor,
+          width: 3,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: titleColor.withOpacity(0.5),
+            blurRadius: 20,
+            spreadRadius: 5,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Dramatic title banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isGoodEnding
+                    ? [const Color(0xFF1A1A1A), const Color(0xFF2D2D2D)]
+                    : [const Color(0xFF1A0000), const Color(0xFF2D0000)],
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: titleColor,
+                  width: 2,
+                ),
+              ),
+            ),
+            child: Text(
+              beat.speaker,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.pixelifySans(
+                textStyle: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: titleColor,
+                  letterSpacing: 2,
+                  shadows: [
+                    Shadow(
+                      color: titleColor.withOpacity(0.8),
+                      blurRadius: 10,
+                    ),
+                    const Shadow(
+                      color: Colors.black,
+                      offset: Offset(3, 3),
+                      blurRadius: 5,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Ending text
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: SingleChildScrollView(
+                child: Text(
+                  _displayedText,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.pixelifySans(
+                    textStyle: TextStyle(
+                      fontSize: 20,
+                      height: 1.4,
+                      color: textColor,
+                      fontWeight: FontWeight.w600,
+                      shadows: [
+                        const Shadow(
+                          color: Colors.black,
+                          offset: Offset(1, 1),
+                          blurRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _playEndingAudio() {
+    final isGoodEnding = _currentNodeId == 'ending_reformer' || 
+                         _currentNodeId == 'ending_whistleblower' || 
+                         _currentNodeId == 'ending_martyr';
+    
+    final audioFile = isGoodEnding 
+        ? 'audio/goodending1.wav' 
+        : 'audio/badending.wav';
+    
+    _audioPlayer.play(AssetSource(audioFile));
   }
 
   Widget _buildEffectBubble(_ActiveStatEffect effect) {
