@@ -257,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
         height: double.infinity,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: const AssetImage('assets/images/Victory.png'),
+            image: const AssetImage('assets/images/victory.png'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
               Colors.black.withValues(alpha: 0.3),
@@ -384,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// Victory Speech Screen
+//  Speech Screen
 
 class VictorySpeechScreen extends StatefulWidget {
   const VictorySpeechScreen({super.key});
@@ -402,7 +402,7 @@ class _VictorySpeechScreenState extends State<VictorySpeechScreen> {
         height: double.infinity,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: const AssetImage('assets/images/Victory.png'),
+            image: const AssetImage('assets/images/victory.png'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
               Colors.black.withValues(alpha: 0.5),
