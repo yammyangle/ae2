@@ -1073,130 +1073,113 @@ class _StoryScreenState extends State<StoryScreen> {
     );
   }
 
-  // KIDNAPPING ALERT
-  void _showKidnappingAlert() {
-    print('🚨 STORY: _showKidnappingAlert called!');
-    
-    final savedState = _StoryCheckpoint(
-      nodeId: _currentNodeId,
-      day: _currentDay,
-      corruptionLevel: corruptionLevel,
-      publicTrust: publicTrust,
-      personalWealth: personalWealth,
-      infrastructureQuality: infrastructureQuality,
-      politicalCapital: politicalCapital,
-    );
-    
-    print('💾 STORY: Saved state - node: ${savedState.nodeId}, day: ${savedState.day}');
+void _showKidnappingAlert() async {
+  final savedState = _StoryCheckpoint(
+    nodeId: _currentNodeId,
+    day: _currentDay,
+    corruptionLevel: corruptionLevel,
+    publicTrust: publicTrust,
+    personalWealth: personalWealth,
+    infrastructureQuality: infrastructureQuality,
+    politicalCapital: politicalCapital,
+  );
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3E5C8),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF7A5633), width: 6),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 12,
-                  offset: Offset(4, 6),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "⚠️ ATTENTION ⚠️",
-                  style: GoogleFonts.pixelifySans(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF4E3A23),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  "You have been KIDNAPPED by the local mafia!\n\n"
-                  "They are furious that you trespassed into their territory.\n"
-                  "They have locked you in their basement and placed a mask on you.\n\n"
-                  "You must collect ALL the oranges – the guard dog's favorite – "
-                  "to distract him and ESCAPE!",
-                  style: GoogleFonts.pixelifySans(
-                    fontSize: 18,
-                    height: 1.4,
-                    color: const Color(0xFF4E3A23),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 30),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7A5633),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 6,
-                  ),
-                  onPressed: () async {
-                    print('🔵 STORY: Continue button pressed');
-                    Navigator.of(context).pop();
-                    print('🔵 STORY: Dialog closed');
-                    
-                    print('🚀 STORY: Navigating to PixelAdventureScreen...');
-                    
-                    final completed = await Navigator.push<bool>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) {
-                          print('🏗️ STORY: Building PixelAdventureScreen with callback');
-                          return PixelAdventureScreen(
-                            onLevelComplete: () {
-                              print('🎉 CALLBACK TRIGGERED! Popping back to story...');
-                              Navigator.of(context).pop(true);
-                              print('✅ CALLBACK: Navigator.pop(true) called');
-                            },
-                          );
-                        },
-                      ),
-                    );
+  // Play alert sound
+  final alertPlayer = AudioPlayer();
+  await alertPlayer.play(AssetSource('audio/alert.mp3'));
 
-                    print('🔙 STORY: Returned from PixelAdventureScreen with result: $completed');
-
-                    if (completed == true) {
-                      print('✅ STORY: Checkpoint completed! Calling _handleMiniGameReturn');
-                      if (mounted) {
-                        print('✅ STORY: Widget is mounted, safe to call _handleMiniGameReturn');
-                        _handleMiniGameReturn(savedState);
-                      } else {
-                        print('❌ STORY: Widget NOT mounted, cannot call _handleMiniGameReturn');
-                      }
-                    } else {
-                      print('❌ STORY: Checkpoint NOT completed (result was: $completed)');
-                    }
-                  },
-                  child: Text(
-                    "CONTINUE",
-                    style: GoogleFonts.pixelifySans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3E5C8),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFF7A5633), width: 6),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 12,
+                offset: Offset(4, 6),
+              ),
+            ],
           ),
-        );
-      },
-    );
-  }
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "⚠️ ATTENTION ⚠️",
+                style: GoogleFonts.pixelifySans(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF4E3A23),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                "You have been KIDNAPPED by the local mafia!\n\n"
+                "They are furious that you trespassed into their territory.\n"
+                "They have locked you in their basement and placed a mask on you.\n\n"
+                "You must collect ALL the oranges – the guard dog's favorite – "
+                "to distract him and ESCAPE!",
+                style: GoogleFonts.pixelifySans(
+                  fontSize: 18,
+                  height: 1.4,
+                  color: const Color(0xFF4E3A23),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF7A5633),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 6,
+                ),
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  alertPlayer.dispose();
+                  
+                  final completed = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) {
+                        return PixelAdventureScreen(
+                          onLevelComplete: () {
+                            Navigator.of(context).pop(true);
+                          },
+                        );
+                      },
+                    ),
+                  );
+
+                  if (completed == true && mounted) {
+                    _handleMiniGameReturn(savedState);
+                  }
+                },
+                child: Text(
+                  "CONTINUE",
+                  style: GoogleFonts.pixelifySans(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
 }

@@ -34,5 +34,7 @@ flutter:
     - assets/images/Traps/Saw/
     - assets/images/Items/Checkpoints/Checkpoint/
     - assets/audio/
+    - assets/audio/alert.mp3
+    - assets/audio/game_music.mp3
 
 shared_preferences: ^2.5.3
